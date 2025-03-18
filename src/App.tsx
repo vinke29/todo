@@ -7,12 +7,9 @@ interface Todo {
   completed: boolean;
 }
 
-type FilterStatus = 'all' | 'active' | 'completed';
-
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
   const handleAddTodo = () => {
     if (inputValue.trim() !== '') {
@@ -27,23 +24,25 @@ function App() {
   };
 
   const handleToggleTodo = (id: number) => {
+    // Mark as completed then remove after a short delay to show the checkmark animation
     setTodos(
       todos.map(todo => 
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        todo.id === id ? { ...todo, completed: true } : todo
       )
     );
+    
+    // Remove the completed task after 500ms
+    setTimeout(() => {
+      setTodos(todos.filter(todo => todo.id !== id));
+    }, 500);
   };
 
   const handleDeleteTodo = (id: number) => {
     setTodos(todos.filter(todo => todo.id !== id));
   };
 
-  const filteredTodos = todos.filter(todo => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'active') return !todo.completed;
-    if (filterStatus === 'completed') return todo.completed;
-    return true;
-  });
+  // Only showing active tasks
+  const activeTodos = todos.filter(todo => !todo.completed);
 
   return (
     <div className="App">
@@ -60,36 +59,34 @@ function App() {
           <button onClick={handleAddTodo}>Add</button>
         </div>
         
-        <div className="filter-buttons">
-          <button 
-            className={filterStatus === 'all' ? 'active' : ''} 
-            onClick={() => setFilterStatus('all')}
-          >
-            All
-          </button>
-          <button 
-            className={filterStatus === 'active' ? 'active' : ''} 
-            onClick={() => setFilterStatus('active')}
-          >
-            Active
-          </button>
-          <button 
-            className={filterStatus === 'completed' ? 'active' : ''}
-            onClick={() => setFilterStatus('completed')}
-          >
-            Completed
-          </button>
-        </div>
-
         <ul className="todo-list">
-          {filteredTodos.map(todo => (
-            <li key={todo.id} className={todo.completed ? 'completed' : ''}>
-              <span onClick={() => handleToggleTodo(todo.id)}>
-                {todo.text}
-              </span>
-              <button onClick={() => handleDeleteTodo(todo.id)}>Delete</button>
+          {activeTodos.map(todo => (
+            <li key={todo.id}>
+              <div className="todo-item">
+                <button 
+                  className="checkbox"
+                  onClick={() => handleToggleTodo(todo.id)}
+                  aria-label="Mark as complete"
+                >
+                  {todo.completed && '✓'}
+                </button>
+                <span className="todo-text">
+                  {todo.text}
+                </span>
+              </div>
+              <button 
+                className="delete-btn"
+                onClick={() => handleDeleteTodo(todo.id)}
+              >
+                Delete
+              </button>
             </li>
           ))}
+          {activeTodos.length === 0 && (
+            <div className="empty-state">
+              <p>No active tasks! Add a new task to get started.</p>
+            </div>
+          )}
         </ul>
       </header>
     </div>

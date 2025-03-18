@@ -82,49 +82,63 @@
   text-align: left;
 }
 
-.todo-list li span {
-  cursor: pointer;
+.todo-item {
+  display: flex;
+  align-items: center;
   flex-grow: 1;
 }
 
-.todo-list li.completed span {
-  text-decoration: line-through;
-  color: #61dafb;
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid #61dafb;
+  background-color: transparent;
+  color: #282c34;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
 }
 
-.todo-list li button {
+.checkbox.checked {
+  background-color: #61dafb;
+}
+
+.todo-text {
+  flex-grow: 1;
+}
+
+.delete-btn {
   background-color: #e74c3c;
   color: white;
   border: none;
   padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
+  margin-left: 10px;
 }
 
-.filter-buttons {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-  width: 80%;
-  max-width: 500px;
+.todo-list li.completed .todo-text {
+  text-decoration: line-through;
+  color: #61dafb;
 }
 
-.filter-buttons button {
-  background-color: #333;
-  color: white;
-  border: 1px solid #61dafb;
-  padding: 8px 16px;
-  margin: 0 5px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.empty-state {
+  margin: 30px 0;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  text-align: center;
+  width: 100%;
 }
 
-.filter-buttons button:hover {
-  background-color: #444;
-}
-
-.filter-buttons button.active {
-  background-color: #61dafb;
-  color: #282c34;
+.empty-state p {
+  margin: 0;
+  color: #61dafb;
+  font-style: italic;
 }
