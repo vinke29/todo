@@ -100,3 +100,31 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+.filter-buttons {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  width: 80%;
+  max-width: 500px;
+}
+
+.filter-buttons button {
+  background-color: #333;
+  color: white;
+  border: 1px solid #61dafb;
+  padding: 8px 16px;
+  margin: 0 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-buttons button:hover {
+  background-color: #444;
+}
+
+.filter-buttons button.active {
+  background-color: #61dafb;
+  color: #282c34;
+}
