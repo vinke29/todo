@@ -1556,3 +1556,117 @@ button:disabled {
   margin: 0;
 }
 
+/* History filter styles */
+.history-filters {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  padding: 8px 12px;
+  background-color: rgba(97, 218, 251, 0.1);
+  border: 1px solid rgba(97, 218, 251, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  color: #444;
+  flex: 1;
+  min-width: 90px;
+  text-align: center;
+}
+
+.filter-tab:hover {
+  background-color: rgba(97, 218, 251, 0.2);
+  transform: translateY(-2px);
+}
+
+.filter-tab.active {
+  background-color: rgba(97, 218, 251, 0.3);
+  border-color: rgba(97, 218, 251, 0.6);
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-date-range {
+  background-color: rgba(97, 218, 251, 0.05);
+  border: 1px solid rgba(97, 218, 251, 0.2);
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-range-display {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.edit-date-range-btn {
+  background-color: rgba(97, 218, 251, 0.2);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  color: #444;
+}
+
+.edit-date-range-btn:hover {
+  background-color: rgba(97, 218, 251, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Dark mode styles for filters */
+.App-header .history-filters {
+  border-bottom-color: #444;
+}
+
+.App-header .filter-tab {
+  background-color: rgba(97, 218, 251, 0.1);
+  border-color: rgba(97, 218, 251, 0.3);
+  color: #ccc;
+}
+
+.App-header .filter-tab:hover {
+  background-color: rgba(97, 218, 251, 0.2);
+}
+
+.App-header .filter-tab.active {
+  background-color: rgba(97, 218, 251, 0.3);
+  border-color: rgba(97, 218, 251, 0.6);
+  color: white;
+}
+
+.App-header .custom-date-range {
+  background-color: rgba(97, 218, 251, 0.1);
+  border-color: rgba(97, 218, 251, 0.3);
+}
+
+.App-header .date-range-display {
+  color: #ccc;
+}
+
+.App-header .edit-date-range-btn {
+  background-color: rgba(97, 218, 251, 0.2);
+  color: #eee;
+}
+
+.App-header .edit-date-range-btn:hover {
+  background-color: rgba(97, 218, 251, 0.3);
+}
+

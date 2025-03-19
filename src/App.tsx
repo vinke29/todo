@@ -55,6 +55,14 @@ function App() {
   const [isTitleHovered, setIsTitleHovered] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   
+  // For history drawer filtering
+  const [historyTimeFilter, setHistoryTimeFilter] = useState<'7days' | '30days' | '90days' | 'custom'>('7days');
+  const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({
+    start: null,
+    end: new Date()
+  });
+  const [isCustomDatePickerOpen, setIsCustomDatePickerOpen] = useState(false);
+  
   // For subtasks
   const [editingSubtaskId, setEditingSubtaskId] = useState<{todoId: number, subtaskId: number} | null>(null);
   const [subtaskText, setSubtaskText] = useState('');
@@ -1145,6 +1153,56 @@ function App() {
     };
   }, [isSettingsOpen]);
 
+  // Get filter date based on selected time filter
+  const getFilterDate = (): Date => {
+    const today = new Date();
+    
+    switch(historyTimeFilter) {
+      case '7days':
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        return sevenDaysAgo;
+      case '30days':
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        return thirtyDaysAgo;
+      case '90days':
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        return ninetyDaysAgo;
+      case 'custom':
+        return customDateRange.start || new Date(0); // Use earliest possible date if not set
+    }
+  };
+
+  // Function to handle custom date range selection
+  const handleCustomDateSelect = (date: Date) => {
+    // If we don't have a start date yet or we already have both, set as start date
+    if (!customDateRange.start || (customDateRange.start && customDateRange.end)) {
+      setCustomDateRange({
+        start: date,
+        end: null
+      });
+    } else {
+      // We have a start date but no end date
+      // Ensure end date is not before start date
+      if (date >= customDateRange.start) {
+        setCustomDateRange({
+          ...customDateRange,
+          end: date
+        });
+        setIsCustomDatePickerOpen(false); // Close the date picker when range is complete
+      } else {
+        // If selected date is before start date, swap them
+        setCustomDateRange({
+          start: date,
+          end: customDateRange.start
+        });
+        setIsCustomDatePickerOpen(false);
+      }
+    }
+  };
+
   return (
     <div className={`App ${currentTheme === 'surprise' ? 'surprise-theme' : ''}`}>
       <header className="App-header">
@@ -1866,13 +1924,153 @@ function App() {
           </div>
           
           <div className="history-content">
+            {/* Time filter selector */}
+            <div className="history-filters">
+              <div className="filter-tabs">
+                <button 
+                  className={`filter-tab ${historyTimeFilter === '7days' ? 'active' : ''}`}
+                  onClick={() => setHistoryTimeFilter('7days')}
+                >
+                  Last 7 days
+                </button>
+                <button 
+                  className={`filter-tab ${historyTimeFilter === '30days' ? 'active' : ''}`}
+                  onClick={() => setHistoryTimeFilter('30days')}
+                >
+                  Last 30 days
+                </button>
+                <button 
+                  className={`filter-tab ${historyTimeFilter === '90days' ? 'active' : ''}`}
+                  onClick={() => setHistoryTimeFilter('90days')}
+                >
+                  Last 90 days
+                </button>
+                <button 
+                  className={`filter-tab ${historyTimeFilter === 'custom' ? 'active' : ''}`}
+                  onClick={() => {
+                    setHistoryTimeFilter('custom');
+                    setIsCustomDatePickerOpen(true);
+                  }}
+                >
+                  Custom
+                </button>
+              </div>
+              
+              {historyTimeFilter === 'custom' && (
+                <div className="custom-date-range">
+                  <div className="date-range-display">
+                    <span>From: {customDateRange.start ? formatDate(customDateRange.start) : 'Select start date'}</span>
+                    <span>To: {customDateRange.end ? formatDate(customDateRange.end) : 'Select end date'}</span>
+                  </div>
+                  <button 
+                    className="edit-date-range-btn"
+                    onClick={() => setIsCustomDatePickerOpen(!isCustomDatePickerOpen)}
+                  >
+                    {isCustomDatePickerOpen ? 'Close' : 'Edit'}
+                  </button>
+                </div>
+              )}
+              
+              {/* Custom date picker */}
+              {isCustomDatePickerOpen && (
+                <div className="calendar-modal-overlay" onClick={() => setIsCustomDatePickerOpen(false)}>
+                  <div className="calendar-popup-container" onClick={e => e.stopPropagation()}>
+                    <div className="calendar-popup">
+                      <div className="calendar-header">
+                        <span className="month-title">
+                          {customDateRange.start && !customDateRange.end 
+                            ? 'Select End Date' 
+                            : 'Select Start Date'}
+                        </span>
+                        <button 
+                          className="close-btn"
+                          onClick={() => setIsCustomDatePickerOpen(false)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      <div className="weekday-header">
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+                          <div key={index} className="weekday">{day}</div>
+                        ))}
+                      </div>
+                      
+                      <div className="calendar-days">
+                        {(() => {
+                          const today = new Date();
+                          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                          const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                          
+                          // Calculate days from previous month to show
+                          const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
+                          
+                          // Calculate total days to show
+                          const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
+                          const totalWeeks = Math.ceil(totalDays / 7);
+                          
+                          const days = [];
+                          
+                          // Add empty days for previous month
+                          for (let i = 0; i < firstDayOfWeek; i++) {
+                            days.push(
+                              <div key={`empty-${i}`} className="empty-day"></div>
+                            );
+                          }
+                          
+                          // Add days for current month
+                          for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                            const date = new Date(today.getFullYear(), today.getMonth(), i);
+                            
+                            // Check if this date is selected
+                            const isStartDate = customDateRange.start && 
+                              date.getDate() === customDateRange.start.getDate() &&
+                              date.getMonth() === customDateRange.start.getMonth() &&
+                              date.getFullYear() === customDateRange.start.getFullYear();
+                              
+                            const isEndDate = customDateRange.end && 
+                              date.getDate() === customDateRange.end.getDate() &&
+                              date.getMonth() === customDateRange.end.getMonth() &&
+                              date.getFullYear() === customDateRange.end.getFullYear();
+                            
+                            const isSelected = isStartDate || isEndDate;
+                            
+                            days.push(
+                              <button
+                                key={i}
+                                className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                                onClick={() => handleCustomDateSelect(date)}
+                                type="button"
+                              >
+                                {i}
+                              </button>
+                            );
+                          }
+                          
+                          // Add empty days to complete last week row if needed
+                          const remainingDays = 7 * totalWeeks - days.length;
+                          for (let i = 0; i < remainingDays; i++) {
+                            days.push(
+                              <div key={`empty-end-${i}`} className="empty-day"></div>
+                            );
+                          }
+                          
+                          return days;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             {/* Section for recently completed tasks */}
             <div className="history-section">
               <h4 className="history-section-title">Recently Completed Tasks</h4>
               
               {completedTasks.length === 0 ? (
                 <div className="no-history">
-                  <p>No tasks completed in the last 7 days</p>
+                  <p>No tasks completed in the selected time period</p>
                 </div>
               ) : (
                 <div className="history-list">
@@ -1880,9 +2078,18 @@ function App() {
                   {completedTasks
                     .filter(task => {
                       if (!task.completedDate) return false;
-                      const sevenDaysAgo = new Date();
-                      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                      return task.completedDate >= sevenDaysAgo;
+                      const filterDate = getFilterDate();
+                      
+                      // For custom range, check if the date is within the range
+                      if (historyTimeFilter === 'custom' && customDateRange.end) {
+                        // Set end of day for end date to include the entire day
+                        const endDate = new Date(customDateRange.end);
+                        endDate.setHours(23, 59, 59, 999);
+                        return task.completedDate >= filterDate && task.completedDate <= endDate;
+                      }
+                      
+                      // For preset ranges, just check if after filter date
+                      return task.completedDate >= filterDate;
                     })
                     .map(task => (
                       <div key={task.id} className="history-item">
@@ -1898,23 +2105,24 @@ function App() {
                           </button>
                           <div className="history-task-header">
                             <span className="history-task-text">{task.text}</span>
-                            {task.completedDate && (
-                              <span className="history-done-date">
-                                Done: {formatDate(task.completedDate)}
-                              </span>
-                            )}
-                            {task.dueDate && (
-                              <span className="history-due-date">
-                                Due: {formatDate(task.dueDate)}
-                              </span>
-                            )}
+                            <div className="history-date-container">
+                              {task.completedDate && (
+                                <span className="history-done-date">
+                                  Done: {formatDate(task.completedDate)}
+                                </span>
+                              )}
+                              {task.dueDate && (
+                                <span className="history-due-date">
+                                  Due: {formatDate(task.dueDate)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
                         {/* Show all subtasks for completed tasks */}
                         {task.subtasks.length > 0 && (
                           <div className="history-subtasks">
-                            <h4>Subtasks</h4>
                             {task.subtasks.map(subtask => (
                               <div key={subtask.id} className="history-subtask-item">
                                 <button
@@ -1926,18 +2134,20 @@ function App() {
                                 >
                                   ✓
                                 </button>
-                                <span className="history-subtask-text">{subtask.text}</span>
-                                <div className="history-subtask-dates">
-                                  {subtask.dueDate && (
-                                    <span className="history-subtask-due-date">
-                                      Due: {formatDate(subtask.dueDate)}
-                                    </span>
-                                  )}
-                                  {subtask.completedDate && (
-                                    <span className="history-subtask-done-date">
-                                      Done: {formatDate(subtask.completedDate)}
-                                    </span>
-                                  )}
+                                <div className="history-subtask-content">
+                                  <span className="history-subtask-text">{subtask.text}</span>
+                                  <div className="history-subtask-dates">
+                                    {subtask.completedDate && (
+                                      <span className="history-subtask-done-date">
+                                        Done: {formatDate(subtask.completedDate)}
+                                      </span>
+                                    )}
+                                    {subtask.dueDate && (
+                                      <span className="history-subtask-due-date">
+                                        Due: {formatDate(subtask.dueDate)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -1964,15 +2174,25 @@ function App() {
                     <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
                     
                     {tasksWithCompletedSubtasks.map(task => {
-                      // Filter subtasks completed in the last 7 days, include hidden ones
-                      const recentCompletedSubtasks = task.subtasks.filter(subtask => {
+                      // Filter subtasks completed in the selected time period, include hidden ones
+                      const filteredCompletedSubtasks = task.subtasks.filter(subtask => {
                         if (!subtask.completed || !subtask.completedDate) return false;
-                        const sevenDaysAgo = new Date();
-                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                        return subtask.completedDate >= sevenDaysAgo;
+                        
+                        const filterDate = getFilterDate();
+                        
+                        // For custom range, check if the date is within the range
+                        if (historyTimeFilter === 'custom' && customDateRange.end) {
+                          // Set end of day for end date to include the entire day
+                          const endDate = new Date(customDateRange.end);
+                          endDate.setHours(23, 59, 59, 999);
+                          return subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                        }
+                        
+                        // For preset ranges, just check if after filter date
+                        return subtask.completedDate >= filterDate;
                       });
                       
-                      if (recentCompletedSubtasks.length === 0) return null;
+                      if (filteredCompletedSubtasks.length === 0) return null;
                       
                       return (
                         <div key={task.id} className="history-item active-parent">
@@ -1981,7 +2201,7 @@ function App() {
                           </div>
                           
                           <div className="history-subtasks">
-                            {recentCompletedSubtasks.map(subtask => (
+                            {filteredCompletedSubtasks.map(subtask => (
                               <div key={subtask.id} className="history-subtask-item">
                                 <button
                                   type="button"
@@ -1992,18 +2212,20 @@ function App() {
                                 >
                                   ✓
                                 </button>
-                                <span className="history-subtask-text">{subtask.text}</span>
-                                <div className="history-subtask-dates">
-                                  {subtask.dueDate && (
-                                    <span className="history-subtask-due-date">
-                                      Due: {formatDate(subtask.dueDate)}
-                                    </span>
-                                  )}
-                                  {subtask.completedDate && (
-                                    <span className="history-subtask-done-date">
-                                      Done: {formatDate(subtask.completedDate)}
-                                    </span>
-                                  )}
+                                <div className="history-subtask-content">
+                                  <span className="history-subtask-text">{subtask.text}</span>
+                                  <div className="history-subtask-dates">
+                                    {subtask.completedDate && (
+                                      <span className="history-subtask-done-date">
+                                        Done: {formatDate(subtask.completedDate)}
+                                      </span>
+                                    )}
+                                    {subtask.dueDate && (
+                                      <span className="history-subtask-due-date">
+                                        Due: {formatDate(subtask.dueDate)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
