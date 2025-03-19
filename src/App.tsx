@@ -16,8 +16,12 @@ function App() {
   const [isDropEndZone, setIsDropEndZone] = useState(false);
   // IMPORTANT: This is the list we'll show during dragging - a visual preview
   const [previewTodos, setPreviewTodos] = useState<Todo[]>([]);
+  // Add state for tracking which task is being edited
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
   const endDropZoneRef = useRef<HTMLDivElement>(null);
   const todoListRef = useRef<HTMLUListElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   
   // Store mouse position data to enhance drop detection
   const mousePositionRef = useRef({ x: 0, y: 0 });
@@ -44,6 +48,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
+  
+  // Focus the edit input when entering edit mode
+  useEffect(() => {
+    if (editingTaskId !== null && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingTaskId]);
 
   // Update preview todos whenever drag state changes
   useEffect(() => {
@@ -123,6 +134,39 @@ function App() {
     setTodos(todos.filter(todo => todo.id !== id));
   };
   
+  // New handlers for editing tasks
+  const handleEditStart = (id: number, text: string) => {
+    setEditingTaskId(id);
+    setEditText(text);
+  };
+  
+  const handleEditCancel = () => {
+    setEditingTaskId(null);
+    setEditText('');
+  };
+  
+  const handleEditSave = () => {
+    if (editingTaskId === null) return;
+    
+    const trimmedText = editText.trim();
+    if (trimmedText === '') {
+      // If the edited text is empty, just cancel editing
+      handleEditCancel();
+      return;
+    }
+    
+    // Update the todo with the new text
+    setTodos(
+      todos.map(todo => 
+        todo.id === editingTaskId ? { ...todo, text: trimmedText } : todo
+      )
+    );
+    
+    // Exit edit mode
+    setEditingTaskId(null);
+    setEditText('');
+  };
+  
   // Enhanced findDropTarget - makes DnD more forgiving by using pointer coordinates
   const findDropTarget = (clientX: number, clientY: number) => {
     if (!todoListRef.current) return null;
@@ -193,6 +237,12 @@ function App() {
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLLIElement>, id: number) => {
+    // Don't allow dragging if we're in edit mode
+    if (editingTaskId !== null) {
+      e.preventDefault();
+      return;
+    }
+    
     setDraggedTaskId(id);
     setIsDragging(true);
     
@@ -219,6 +269,9 @@ function App() {
 
   const handleDragOver = (e: React.DragEvent<HTMLLIElement | HTMLDivElement>, id?: number) => {
     e.preventDefault();
+    
+    // Don't allow drag over if we're in edit mode
+    if (editingTaskId !== null) return;
     
     // Update current mouse position
     mousePositionRef.current = { x: e.clientX, y: e.clientY };
@@ -260,21 +313,18 @@ function App() {
     e.preventDefault();
     e.stopPropagation();
     
-    if (draggedTaskId === null) return;
+    // Don't allow drop if we're in edit mode
+    if (editingTaskId !== null || draggedTaskId === null) return;
     
-    // Simply use the current preview order as the new order
-    setTodos(
-      todos.map(todo => {
-        // Find this todo in the preview list
-        const previewTodo = previewTodos.find(pt => pt.id === todo.id);
-        // If it exists in preview and is not completed, keep it
-        if (previewTodo && !todo.completed) {
-          return todo;
-        }
-        // Otherwise it's either completed or not in preview (filtered out)
-        return todo;
-      }).filter(todo => !todo.completed || todo.id !== draggedTaskId)
-    );
+    // First, filter out completed todos so we keep them
+    const completedTodos = todos.filter(todo => todo.completed);
+    
+    // Use the preview todos as the new active todos
+    // This ensures the drop order matches exactly what the user sees
+    const newTodos = [...previewTodos, ...completedTodos];
+    
+    // Update todos with the new order
+    setTodos(newTodos);
     
     // Reset drag states
     resetDragState();
@@ -291,6 +341,15 @@ function App() {
     setIsDragging(false);
     setIsDropEndZone(false);
     isActiveDropTargetRef.current = false;
+  };
+
+  // Handle keyboard events in edit mode
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditSave();
+    } else if (e.key === 'Escape') {
+      handleEditCancel();
+    }
   };
 
   return (
@@ -315,7 +374,7 @@ function App() {
               <li 
                 key={todo.id}
                 data-id={todo.id}
-                draggable
+                draggable={editingTaskId !== todo.id}
                 onDragStart={(e) => handleDragStart(e, todo.id)}
                 onDragOver={(e) => handleDragOver(e, todo.id)}
                 onDragLeave={handleDragLeave}
@@ -324,24 +383,49 @@ function App() {
                 className={`
                   ${draggedTaskId === todo.id ? 'dragging' : ''} 
                   ${dragOverTaskId === todo.id ? 'drag-over' : ''}
+                  ${editingTaskId === todo.id ? 'editing' : ''}
                   preview-item
                 `}
               >
                 <div className="todo-item">
                   <button 
-                    className="checkbox"
+                    className={`checkbox ${todo.completed ? 'checked' : ''}`}
                     onClick={() => handleToggleTodo(todo.id)}
                     aria-label="Mark as complete"
+                    disabled={editingTaskId === todo.id}
                   >
                     {todo.completed && '✓'}
                   </button>
-                  <span className="todo-text">
-                    {todo.text}
-                  </span>
+                  
+                  {editingTaskId === todo.id ? (
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      className="edit-input"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onBlur={handleEditSave}
+                      onKeyDown={handleEditKeyDown}
+                    />
+                  ) : (
+                    <div className="todo-text-container">
+                      <span className="todo-text">
+                        {todo.text}
+                      </span>
+                      <button 
+                        className="edit-btn"
+                        onClick={() => handleEditStart(todo.id, todo.text)}
+                        aria-label="Edit task"
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button 
                   className="delete-btn"
                   onClick={() => handleDeleteTodo(todo.id)}
+                  disabled={editingTaskId === todo.id}
                 >
                   Delete
                 </button>

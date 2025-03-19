@@ -231,6 +231,8 @@
 
 .todo-text {
   flex-grow: 1;
+  margin-right: 5px;
+  word-break: break-word;
 }
 
 .delete-btn {
@@ -270,4 +272,66 @@
   margin-right: 10px;
   cursor: grab;
   font-size: 14px;
+}
+
+.todo-text-container {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  position: relative;
+}
+
+.edit-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: rgba(97, 218, 251, 0.7);
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.todo-text-container:hover .edit-btn {
+  opacity: 0.7;
+}
+
+.edit-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.2);
+  color: #61dafb;
+}
+
+.edit-input {
+  flex-grow: 1;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(97, 218, 251, 0.5);
+  border-radius: 4px;
+  color: white;
+  font-size: 16px;
+  padding: 6px 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.edit-input:focus {
+  border-color: #61dafb;
+  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.3);
+}
+
+li.editing {
+  background-color: rgba(97, 218, 251, 0.1);
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.1);
+}
+
+/* Disable dragging cursor when editing */
+li.editing {
+  cursor: default !important;
+}
+
+/* Style for disabled buttons */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
