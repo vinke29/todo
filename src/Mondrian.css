@@ -305,20 +305,47 @@
   transform: translateY(-2px);
 }
 
-/* Subtasks styling */
+/* Subtasks styling - more consistent color approach */
 .mondrian-theme .subtasks-container {
   border-top: var(--mondrian-border);
   margin-top: 15px;
   padding-top: 15px;
 }
 
+/* Use consistent background for all subtasks regardless of parent color */
 .mondrian-theme .subtask-item {
   border: 2px solid var(--mondrian-black);
+  border-left-width: 0;
   border-radius: 0;
   padding: 10px;
+  padding-left: 12px;
   margin: 8px 0;
-  background-color: var(--mondrian-light-grey);
+  background-color: #f0f0f0;
   transition: var(--mondrian-transition);
+  position: relative;
+}
+
+/* Create a left border using ::before pseudo-element - similar to a marker */
+.mondrian-theme .subtask-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+/* Subtask left border colors per parent task type */
+.mondrian-theme .todo-list li:nth-child(3n+1) .subtask-item::before {
+  background-color: var(--mondrian-black);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+2) .subtask-item::before {
+  background-color: var(--mondrian-yellow);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-item::before {
+  background-color: var(--mondrian-red);
 }
 
 .mondrian-theme .subtask-item:hover {
@@ -326,13 +353,68 @@
   box-shadow: 0 4px 0 var(--mondrian-black);
 }
 
+/* Subtask checkbox styling */
 .mondrian-theme .subtask-checkbox {
   border: 2px solid var(--mondrian-black);
   border-radius: 0;
+  transition: var(--mondrian-transition);
 }
 
 .mondrian-theme .subtask-checkbox.checked {
   background-color: var(--mondrian-blue);
+}
+
+/* Improve subtask text and date colors for consistency */
+.mondrian-theme .subtask-text,
+.mondrian-theme .subtask-due-date {
+  color: var(--mondrian-black);
+}
+
+/* Subtask action buttons styling */
+.mondrian-theme .subtask-save-btn,
+.mondrian-theme .subtask-cancel-btn {
+  background: none;
+  border: 2px solid var(--mondrian-black);
+  color: var(--mondrian-black);
+  padding: 5px 10px;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--mondrian-transition);
+  font-weight: 500;
+}
+
+.mondrian-theme .subtask-save-btn {
+  background-color: var(--mondrian-blue);
+  color: white;
+}
+
+.mondrian-theme .subtask-save-btn:hover {
+  background-color: #0a4c91;
+  transform: translateY(-2px);
+}
+
+.mondrian-theme .subtask-cancel-btn {
+  background-color: #e0e0e0;
+}
+
+.mondrian-theme .subtask-cancel-btn:hover {
+  background-color: #cccccc;
+  transform: translateY(-2px);
+}
+
+/* New subtask input improvements */
+.mondrian-theme .new-subtask-input-container {
+  margin-bottom: 15px;
+  background-color: #f0f0f0;
+  padding: 10px;
+  border: 2px solid var(--mondrian-black);
+}
+
+.mondrian-theme .new-subtask-input {
+  background-color: white;
+  border: 2px solid var(--mondrian-black);
+  color: var(--mondrian-black);
 }
 
 /* Edit inputs */
