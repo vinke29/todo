@@ -857,13 +857,8 @@ function App() {
               </div>
             </div>
           ) : (
-            <h1>
+            <h1 title="Click to edit">
               {appTitle || 'Your to-dos'}
-              {isTitleHovered && (
-                <span className="title-edit-icon" title="Edit title">
-                  ✎
-                </span>
-              )}
             </h1>
           )}
         </div>
@@ -963,7 +958,11 @@ function App() {
                         />
                       ) : (
                         <>
-                          <span className="todo-text">{todo.text}</span>
+                          <span 
+                            className="todo-text"
+                            onClick={() => handleEditStart(todo.id, todo.text)}
+                            title="Click to edit"
+                          >{todo.text}</span>
                           {todo.dueDate && (
                             <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
                           )}
@@ -975,14 +974,6 @@ function App() {
                   <div className="todo-controls">
                     {editingTaskId !== todo.id && (
                       <>
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          onClick={() => handleEditStart(todo.id, todo.text)}
-                          aria-label="Edit task"
-                        >
-                          ✎
-                        </button>
                         <button
                           type="button"
                           className="calendar-icon"
@@ -1093,7 +1084,11 @@ function App() {
                                     />
                                   ) : (
                                     <>
-                                      <span className="subtask-text">{subtask.text}</span>
+                                      <span 
+                                        className="subtask-text"
+                                        onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
+                                        title="Click to edit"
+                                      >{subtask.text}</span>
                                       {subtask.dueDate && (
                                         <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
                                       )}
@@ -1104,14 +1099,6 @@ function App() {
                               
                               {(!editingSubtaskId || editingSubtaskId.subtaskId !== subtask.id) && (
                                 <div className="subtask-actions">
-                                  <button
-                                    type="button"
-                                    className="edit-subtask-btn"
-                                    onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
-                                    aria-label="Edit subtask"
-                                  >
-                                    ✎
-                                  </button>
                                   <button
                                     type="button"
                                     className="subtask-calendar-icon"
