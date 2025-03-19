@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, createRef } from 'react';
 import './App.css';
 
 interface Todo {
   id: number;
   text: string;
   completed: boolean;
+  dueDate: Date | null;
 }
 
 function App() {
@@ -31,6 +32,9 @@ function App() {
   
   // Filter only active todos
   const activeTodos = todos.filter(todo => !todo.completed);
+  
+  // Add state for tracking which task has an open calendar
+  const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
   
   // Load todos from localStorage on initial render
   useEffect(() => {
@@ -109,7 +113,8 @@ function App() {
       const newTodo: Todo = {
         id: Date.now(),
         text: inputValue,
-        completed: false
+        completed: false,
+        dueDate: null
       };
       setTodos([...todos, newTodo]);
       setInputValue('');
@@ -352,6 +357,34 @@ function App() {
     }
   };
 
+  // Format date for display
+  const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+  };
+  
+  // Handle date selection for a task
+  const handleDateSelect = (id: number, date: Date) => {
+    setTodos(
+      todos.map(todo => 
+        todo.id === id ? { ...todo, dueDate: date } : todo
+      )
+    );
+    
+    // Close the calendar
+    setCalendarOpenForId(null);
+  };
+  
+  // Toggle calendar visibility for a task
+  const toggleCalendar = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    setCalendarOpenForId(calendarOpenForId === id ? null : id);
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -363,6 +396,8 @@ function App() {
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Add a new task"
             onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+            id="new-task-input"
+            name="new-task"
           />
           <button onClick={handleAddTodo}>Add</button>
         </div>
@@ -412,19 +447,46 @@ function App() {
                       <span className="todo-text">
                         {todo.text}
                       </span>
-                      <button 
-                        className="edit-btn"
-                        onClick={() => handleEditStart(todo.id, todo.text)}
-                        aria-label="Edit task"
-                      >
-                        ✎
-                      </button>
+                      
+                      {todo.dueDate && (
+                        <div className="todo-due-date">
+                          {formatDate(todo.dueDate)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+                <div className="todo-actions">
+                  <button 
+                    className="edit-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditStart(todo.id, todo.text);
+                    }}
+                    aria-label="Edit task"
+                    disabled={editingTaskId === todo.id}
+                  >
+                    ✎
+                  </button>
+                  
+                  <button 
+                    className="calendar-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCalendar(e, todo.id);
+                    }}
+                    aria-label="Select due date"
+                    disabled={editingTaskId === todo.id}
+                  >
+                    📅
+                  </button>
+                </div>
                 <button 
                   className="delete-btn"
-                  onClick={() => handleDeleteTodo(todo.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTodo(todo.id);
+                  }}
                   disabled={editingTaskId === todo.id}
                 >
                   Delete
@@ -453,6 +515,89 @@ function App() {
           )}
         </div>
       </header>
+      
+      {/* Calendar overlay and popup - separated from the task list for better z-index handling */}
+      {calendarOpenForId !== null && (
+        <div 
+          className="calendar-modal-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCalendarOpenForId(null);
+          }}
+        >
+          {todos.map(todo => todo.id === calendarOpenForId && (
+            <div 
+              key={`calendar-${todo.id}`}
+              className="calendar-popup-container"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="calendar-popup">
+                <div className="calendar-header">
+                  <div className="month-title">
+                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCalendarOpenForId(null);
+                    }}
+                    className="close-btn"
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                <div className="calendar-content">
+                  <div className="weekday-header">
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                      <div key={day} className="weekday">{day}</div>
+                    ))}
+                  </div>
+                  
+                  <div className="calendar-days">
+                    {(() => {
+                      const today = new Date();
+                      const year = today.getFullYear();
+                      const month = today.getMonth();
+                      
+                      // Get first day of month and total days
+                      const firstDayOfMonth = new Date(year, month, 1).getDay();
+                      const daysInMonth = new Date(year, month + 1, 0).getDate();
+                      
+                      // Create array for calendar days
+                      const days = [];
+                      
+                      // Add empty spaces for days before the first of month
+                      for (let i = 0; i < firstDayOfMonth; i++) {
+                        days.push(<div key={`empty-${i}`} className="empty-day"></div>);
+                      }
+                      
+                      // Add days of month
+                      for (let i = 1; i <= daysInMonth; i++) {
+                        const date = new Date(year, month, i);
+                        days.push(
+                          <button 
+                            key={i}
+                            className={`calendar-day ${todo.dueDate && i === todo.dueDate.getDate() ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDateSelect(todo.id, date);
+                            }}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      return days;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
