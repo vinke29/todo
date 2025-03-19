@@ -33,6 +33,12 @@ function App() {
   const todoListRef = useRef<HTMLUListElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   
+  // For app title editing
+  const [appTitle, setAppTitle] = useState('Your to-dos');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isTitleHovered, setIsTitleHovered] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
   // For subtasks
   const [editingSubtaskId, setEditingSubtaskId] = useState<{todoId: number, subtaskId: number} | null>(null);
   const [subtaskText, setSubtaskText] = useState('');
@@ -64,9 +70,15 @@ function App() {
   const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
 
-  // Load todos from localStorage on initial render
+  // Load title from localStorage on initial render
   useEffect(() => {
     const savedTodos = localStorage.getItem('todos');
+    const savedTitle = localStorage.getItem('appTitle');
+    
+    if (savedTitle) {
+      setAppTitle(savedTitle);
+    }
+    
     if (savedTodos) {
       try {
         const parsedTodos = JSON.parse(savedTodos, (key, value) => {
@@ -83,11 +95,23 @@ function App() {
     }
   }, []);
 
-  // Save todos to localStorage when they change
+  // Save todos and title to localStorage when they change
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
   
+  useEffect(() => {
+    localStorage.setItem('appTitle', appTitle);
+  }, [appTitle]);
+
+  // Focus the title input when entering edit mode
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
   // Focus the edit input when entering edit mode
   useEffect(() => {
     if (editingTaskId !== null && editInputRef.current) {
@@ -727,10 +751,86 @@ function App() {
     }
   };
 
+  // Handle app title editing
+  const handleTitleEditStart = () => {
+    setIsEditingTitle(true);
+  };
+  
+  const handleTitleEditSave = () => {
+    // Trim the title but keep it even if empty (can use a default in the JSX)
+    setAppTitle(appTitle.trim());
+    setIsEditingTitle(false);
+  };
+  
+  const handleTitleEditCancel = () => {
+    // If user cancels, revert to the saved title
+    const savedTitle = localStorage.getItem('appTitle');
+    if (savedTitle) {
+      setAppTitle(savedTitle);
+    } else {
+      setAppTitle('Your to-dos');
+    }
+    setIsEditingTitle(false);
+  };
+  
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleEditSave();
+    } else if (e.key === 'Escape') {
+      handleTitleEditCancel();
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Simple Todo App</h1>
+        <div 
+          className={`app-title-container ${isTitleHovered ? 'hovered' : ''}`}
+          onMouseEnter={() => setIsTitleHovered(true)}
+          onMouseLeave={() => setIsTitleHovered(false)}
+          onClick={!isEditingTitle ? handleTitleEditStart : undefined}
+        >
+          {isEditingTitle ? (
+            <div className="title-edit-container">
+              <input
+                type="text"
+                className="title-edit-input"
+                value={appTitle}
+                onChange={(e) => setAppTitle(e.target.value)}
+                onBlur={handleTitleEditSave}
+                onKeyDown={handleTitleKeyDown}
+                ref={titleInputRef}
+                autoFocus
+              />
+              <div className="title-edit-actions">
+                <button
+                  type="button"
+                  className="title-save-btn"
+                  onClick={handleTitleEditSave}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="title-cancel-btn"
+                  onClick={handleTitleEditCancel}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <h1>
+              {appTitle || 'Your to-dos'}
+              {isTitleHovered && (
+                <span className="title-edit-icon" title="Edit title">
+                  ✎
+                </span>
+              )}
+            </h1>
+          )}
+        </div>
+        
         <div className="todo-input-container">
           <div className="todo-input">
             <input
@@ -1002,12 +1102,6 @@ function App() {
               onDrop={(e) => handleDrop(e)}
             >
               <div className="drop-indicator"></div>
-            </div>
-          )}
-          
-          {previewTodos.length === 0 && (
-            <div className="empty-state">
-              <p>No active tasks! Add a new task to get started.</p>
             </div>
           )}
         </div>
