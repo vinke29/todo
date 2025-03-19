@@ -2295,6 +2295,40 @@ function App() {
                 }
               };
               
+              // Get encouraging message based on timeliness
+              const getEncouragementMessage = () => {
+                const taskTimeValue = tasksWithDueDate > 0 ? parseFloat(avgTaskCompletionTime as string) : 0;
+                const subtaskTimeValue = subtasksWithDueDate > 0 ? parseFloat(avgSubtaskCompletionTime as string) : 0;
+                
+                // No due dates set
+                if (tasksWithDueDate === 0 && subtasksWithDueDate === 0) {
+                  return "Keep up the good work!";
+                }
+                
+                // If either tasks or subtasks are late
+                if (taskTimeValue > 0 || subtaskTimeValue > 0) {
+                  const messages = [
+                    "Keep working hard to get your tasks done on time!",
+                    "Remember, earlier planning leads to better results!",
+                    "Small improvements in timing add up to big productivity gains!",
+                    "Being on time is a skill you can develop with practice!"
+                  ];
+                  // Return a random message
+                  return messages[Math.floor(Math.random() * messages.length)];
+                } 
+                // All tasks/subtasks completed on time or early
+                else {
+                  const messages = [
+                    "Fantastic work hitting your deadlines!",
+                    "Keep up the good work!",
+                    "You're doing an amazing job with your task management!",
+                    "Excellent time management skills!"
+                  ];
+                  // Return a random message
+                  return messages[Math.floor(Math.random() * messages.length)];
+                }
+              };
+              
               // Only show the stats if we have completed tasks or subtasks
               if (filteredCompletedTasks.length > 0 || completedSubtasks > 0) {
                 return (
@@ -2317,7 +2351,7 @@ function App() {
                         </p>
                       )}
                       
-                      <p className="stats-encouragement">Keep up the good work!</p>
+                      <p className="stats-encouragement">{getEncouragementMessage()}</p>
                     </div>
                   </div>
                 );
