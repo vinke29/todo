@@ -21,17 +21,14 @@
 .mondrian-theme .App-header {
   background-color: var(--mondrian-white);
   color: var(--mondrian-black);
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: auto;
-  gap: 10px;
-  padding: 30px;
-  position: relative;
+  padding: 30px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* App title styling */
 .mondrian-theme .app-title-container {
-  grid-column: 1 / 13;
   background-color: var(--mondrian-blue);
   color: var(--mondrian-white);
   padding: 20px;
@@ -39,11 +36,15 @@
   border: var(--mondrian-border);
   box-shadow: none;
   transition: var(--mondrian-transition);
+  width: 80%;
+  max-width: 500px;
+  box-sizing: border-box;
 }
 
 .mondrian-theme .app-title-container h1 {
   color: var(--mondrian-white);
   margin: 0;
+  font-size: 1.8rem;
 }
 
 .mondrian-theme .app-title-container.hovered {
@@ -53,49 +54,69 @@
 
 /* Todo input container */
 .mondrian-theme .todo-input-container {
-  grid-column: 1 / 13;
   border: var(--mondrian-border);
-  padding: 15px;
-  margin: 0 0 15px 0;
-  width: 100%;
-  max-width: 100%;
+  padding: 12px;
+  margin: 20px 0;
+  width: 80%;
+  max-width: 500px;
+  box-sizing: border-box;
 }
 
 .mondrian-theme .todo-input {
   border: none;
   width: 100%;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .mondrian-theme .todo-input input {
-  border: 2px solid var(--mondrian-black);
-  border-radius: 0;
-  padding: 12px;
-  font-size: 16px;
+  border: none;
+  padding: 10px 12px;
+  font-size: 1.1rem;
   color: var(--mondrian-black);
   width: calc(100% - 120px);
+  height: 42px;
+  line-height: normal;
+  margin: 0;
+  box-sizing: border-box;
+  display: block;
 }
 
 .mondrian-theme .add-btn {
   background-color: var(--mondrian-red);
   color: var(--mondrian-white);
-  border: 2px solid var(--mondrian-black);
+  border: none;
+  border-left: 2px solid var(--mondrian-black);
   border-radius: 0;
-  padding: 10px 20px;
-  height: 100%;
+  padding: 0 20px;
+  height: 42px;
+  line-height: normal;
   font-weight: bold;
   transition: var(--mondrian-transition);
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mondrian-theme .add-btn:hover {
   background-color: #c52825;
 }
 
+/* Sort options styling */
 .mondrian-theme .sort-options {
-  grid-column: 1 / 13;
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 15px;
-  width: 100%;
+  width: 80%;
+  max-width: 500px;
+  margin: 5px 0 15px;
+  box-sizing: border-box;
 }
 
 .mondrian-theme .sort-toggle {
@@ -104,7 +125,7 @@
   border: 2px solid var(--mondrian-black);
   border-radius: 0;
   transition: var(--mondrian-transition);
-  padding: 8px 12px;
+  padding: 6px 12px;
   font-size: 14px;
   margin-left: auto;
   width: auto;
@@ -120,31 +141,31 @@
 
 /* Todo container styling */
 .mondrian-theme .todo-container {
-  grid-column: 1 / 13;
-  width: 100%;
-  max-width: 100%;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 10px;
+  width: 80%;
+  max-width: 500px;
+  box-sizing: border-box;
 }
 
 .mondrian-theme .todo-list {
-  grid-column: 1 / 13;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 10px;
   width: 100%;
+  padding: 0;
+  margin: 0;
 }
 
 /* Alternate task colors based on position */
 .mondrian-theme .todo-list li {
-  margin: 0;
+  margin: 10px 0;
   padding: 15px;
   border: var(--mondrian-border);
   border-radius: 0;
   box-shadow: none;
   transition: var(--mondrian-transition);
-  grid-column: span 12;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.mondrian-theme .todo-list li:first-child {
+  margin-top: 0;
 }
 
 .mondrian-theme .todo-list li:nth-child(3n+1) {
@@ -166,11 +187,29 @@
 }
 
 /* Task text styling */
+.mondrian-theme .todo-text-container {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.mondrian-theme .subtask-text-container {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
 .mondrian-theme .todo-text {
   color: inherit;
-  padding: 4px 6px;
+  padding: 4px 0;
   border-radius: 0;
   transition: var(--mondrian-transition);
+  margin-bottom: 2px;
+}
+
+.mondrian-theme .subtask-text {
+  padding: 4px 0;
+  margin-bottom: 2px;
 }
 
 .mondrian-theme .todo-list li:nth-child(3n+3) .todo-text {
@@ -186,11 +225,37 @@
 }
 
 /* Checkbox styling */
+.mondrian-theme .todo-item {
+  display: flex;
+  align-items: flex-start;
+  flex-grow: 1;
+  padding-right: 15px;
+  max-width: 70%;
+}
+
 .mondrian-theme .checkbox {
+  min-width: 24px;
+  height: 24px;
   border: 2px solid var(--mondrian-black);
   background-color: var(--mondrian-white);
   border-radius: 0;
   transition: var(--mondrian-transition);
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.mondrian-theme .todo-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Consistent alignment for task content and subtasks */
+.mondrian-theme .todo-item,
+.mondrian-theme .subtask-content {
+  display: flex;
+  align-items: flex-start;
 }
 
 .mondrian-theme .checkbox.checked {
@@ -484,4 +549,73 @@
   .mondrian-theme .App-header {
     padding: 15px;
   }
+}
+
+.mondrian-theme .todo-due-date {
+  font-size: 0.9rem;
+  color: var(--mondrian-black);
+  font-weight: 500;
+  margin-top: 4px;
+  padding-left: 0;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .todo-due-date {
+  color: var(--mondrian-white);
+  font-weight: 500;
+}
+
+.mondrian-theme .subtask-due-date {
+  font-size: 0.85rem;
+  color: var(--mondrian-black);
+  font-weight: 500;
+  margin-top: 2px;
+  padding-left: 0;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-due-date {
+  color: var(--mondrian-white);
+  font-weight: 500;
+}
+
+.mondrian-theme .calendar-icon-wrapper {
+  position: absolute;
+  right: 85px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-right: none;
+}
+
+.mondrian-theme .new-task-calendar-icon {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--mondrian-black);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.mondrian-theme .new-task-calendar-icon:hover {
+  color: var(--mondrian-blue);
+  transform: scale(1.2);
+}
+
+/* Ensure all main containers have the same visual width */
+.mondrian-theme .app-title-container,
+.mondrian-theme .todo-input-container,
+.mondrian-theme .sort-options,
+.mondrian-theme .todo-container {
+  width: 80%;
+  max-width: 500px;
+  box-sizing: border-box;
 } 
