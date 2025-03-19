@@ -2062,8 +2062,156 @@ function App() {
                 </div>
               )}
             </div>
+
+            {/* Productivity Stats Summary */}
+            {(() => {
+              // Get tasks completed in the selected time period
+              const filterDate = getFilterDate();
+              
+              // For custom range, we need to handle the end date
+              let endDate = new Date();
+              if (historyTimeFilter === 'custom' && customDateRange.end) {
+                endDate = new Date(customDateRange.end);
+                endDate.setHours(23, 59, 59, 999); // End of day
+              }
+              
+              // Count completed tasks in the time period
+              const completedTasks = todos.filter(task => 
+                task.completed && task.completedDate && (
+                  historyTimeFilter === 'custom' && customDateRange.end
+                    ? task.completedDate >= filterDate && task.completedDate <= endDate
+                    : task.completedDate >= filterDate
+                )
+              );
+              
+              // Count all completed subtasks within completed tasks
+              let completedSubtasks = 0;
+              let taskCompletionTimes = 0;
+              let subtaskCompletionTimes = 0;
+              let tasksWithDueDate = 0;
+              let subtasksWithDueDate = 0;
+              
+              // Calculate average completion time for tasks and count subtasks
+              completedTasks.forEach((task: Todo) => {
+                if (task.completedDate && task.dueDate) {
+                  const completionTime = Math.max(0, (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                  taskCompletionTimes += completionTime;
+                  tasksWithDueDate++;
+                }
+                
+                // Count and calculate completed subtasks
+                task.subtasks.forEach((subtask: Subtask) => {
+                  if (subtask.completed && subtask.completedDate) {
+                    // Check if the subtask completion date is within our filter
+                    let isInRange = false;
+                    
+                    if (historyTimeFilter === 'custom' && customDateRange.end) {
+                      isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                    } else {
+                      isInRange = subtask.completedDate >= filterDate;
+                    }
+                    
+                    if (isInRange) {
+                      completedSubtasks++;
+                      
+                      if (subtask.dueDate) {
+                        const completionTime = Math.max(0, (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                        subtaskCompletionTimes += completionTime;
+                        subtasksWithDueDate++;
+                      }
+                    }
+                  }
+                });
+              });
+              
+              // Find completed subtasks in active tasks
+              const activeTasks = todos.filter(todo => !todo.completed);
+              activeTasks.forEach((task: Todo) => {
+                task.subtasks.forEach((subtask: Subtask) => {
+                  if (subtask.completed && subtask.completedDate) {
+                    // Check if the subtask completion date is within our filter
+                    let isInRange = false;
+                    
+                    if (historyTimeFilter === 'custom' && customDateRange.end) {
+                      isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                    } else {
+                      isInRange = subtask.completedDate >= filterDate;
+                    }
+                    
+                    if (isInRange) {
+                      completedSubtasks++;
+                      
+                      if (subtask.dueDate) {
+                        const completionTime = Math.max(0, (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                        subtaskCompletionTimes += completionTime;
+                        subtasksWithDueDate++;
+                      }
+                    }
+                  }
+                });
+              });
+              
+              // Calculate averages
+              const avgTaskCompletionTime = tasksWithDueDate > 0 
+                ? (taskCompletionTimes / tasksWithDueDate).toFixed(1)
+                : "N/A";
+                
+              const avgSubtaskCompletionTime = subtasksWithDueDate > 0
+                ? (subtaskCompletionTimes / subtasksWithDueDate).toFixed(1)
+                : "N/A";
+              
+              // Create period text based on selected filter
+              let periodText = "";
+              switch (historyTimeFilter) {
+                case '7days':
+                  periodText = "in the past 7 days";
+                  break;
+                case '30days':
+                  periodText = "in the past 30 days";
+                  break;
+                case '90days':
+                  periodText = "in the past 90 days";
+                  break;
+                case 'custom':
+                  periodText = "in the selected period";
+                  break;
+              }
+              
+              // Only show the stats if we have completed tasks or subtasks
+              if (completedTasks.length > 0 || completedSubtasks > 0) {
+                return (
+                  <div className="productivity-stats">
+                    <h3 className="stats-header">
+                      <span role="img" aria-label="celebration">🎉</span> Your Productivity
+                    </h3>
+                    <div className="stats-message">
+                      Hooray! You've finished <strong>{completedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.
+                      {tasksWithDueDate > 0 && (
+                        <p>Each task took an average of <strong>{avgTaskCompletionTime}</strong> days relative to due date.</p>
+                      )}
+                      {subtasksWithDueDate > 0 && (
+                        <p>Each subtask took an average of <strong>{avgSubtaskCompletionTime}</strong> days relative to due date.</p>
+                      )}
+                      <p className="stats-encouragement">Keep up the good work!</p>
+                    </div>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="productivity-stats">
+                  <h3 className="stats-header">
+                    <span role="img" aria-label="target">🎯</span> Your Productivity
+                  </h3>
+                  <div className="stats-message">
+                    <p>No completed tasks or subtasks {periodText}.</p>
+                    <p className="stats-encouragement">Start completing tasks to see your productivity stats!</p>
+                  </div>
+                </div>
+              );
+            })()}
             
-            {/* Section for recently completed tasks */}
+            {/* Section for completed tasks */}
             <div className="history-section">
               <h4 className="history-section-title">Recently Completed Tasks</h4>
               

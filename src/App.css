@@ -1670,3 +1670,71 @@ button:disabled {
   background-color: rgba(97, 218, 251, 0.3);
 }
 
+/* Productivity Stats styles */
+.productivity-stats {
+  background-color: rgba(97, 218, 251, 0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(97, 218, 251, 0.2);
+  transition: all 0.3s ease;
+}
+
+.productivity-stats:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stats-header {
+  color: #333;
+  font-size: 1.2rem;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-message {
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.stats-message p {
+  margin: 8px 0;
+}
+
+.stats-message strong {
+  color: #61dafb;
+  font-weight: 600;
+}
+
+.stats-encouragement {
+  font-weight: 500;
+  color: #4bb543;
+  margin-top: 12px !important;
+}
+
+/* Dark mode styles for productivity stats */
+.App-header .productivity-stats {
+  background-color: rgba(97, 218, 251, 0.15);
+  border-color: rgba(97, 218, 251, 0.3);
+}
+
+.App-header .stats-header {
+  color: #f8f9fa;
+}
+
+.App-header .stats-message {
+  color: #ddd;
+}
+
+.App-header .stats-message strong {
+  color: #61dafb;
+}
+
+.App-header .stats-encouragement {
+  color: #6ddb65;
+}
+
