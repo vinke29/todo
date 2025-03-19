@@ -320,9 +320,21 @@
   padding: 10px;
   padding-left: 12px;
   margin: 8px 0;
-  background-color: #f0f0f0;
   transition: var(--mondrian-transition);
   position: relative;
+}
+
+/* Customize subtask background colors to match parent tasks */
+.mondrian-theme .todo-list li:nth-child(3n+1) .subtask-item {
+  background-color: #f8f8f8; /* Slightly darker than white */
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+2) .subtask-item {
+  background-color: #fde980; /* Lighter yellow */
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-item {
+  background-color: #e86963; /* Lighter red */
 }
 
 /* Create a left border using ::before pseudo-element - similar to a marker */
@@ -348,9 +360,63 @@
   background-color: var(--mondrian-red);
 }
 
-.mondrian-theme .subtask-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 0 var(--mondrian-black);
+/* Improve text colors for subtasks in red parent containers */
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-item .subtask-text,
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-item .subtask-due-date {
+  color: var(--mondrian-black);
+}
+
+/* Fix strikethrough text color for completed tasks to make it more visible */
+.mondrian-theme .todo-text.completed,
+.mondrian-theme .subtask-text.completed {
+  text-decoration: line-through;
+  text-decoration-color: var(--mondrian-red) !important;
+  text-decoration-thickness: 2px;
+  opacity: 0.9;
+  color: #333333 !important; /* Much darker text color instead of light blue */
+  font-weight: 600;
+}
+
+/* Specific styling for completed subtask text in different background tasks */
+.mondrian-theme .subtask-item.completed .subtask-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--mondrian-red) !important;
+  text-decoration-thickness: 2px;
+  color: #333333 !important; /* Override the light blue color from App.css */
+  opacity: 0.9 !important;
+  font-weight: 600;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+1) .subtask-item.completed .subtask-text {
+  color: #333333 !important; /* Dark text for white background */
+  text-decoration-color: var(--mondrian-red) !important;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+2) .subtask-item.completed .subtask-text {
+  color: #333333 !important; /* Dark text for yellow background */
+  text-decoration-color: var(--mondrian-red) !important;
+}
+
+/* Override the strikethrough for red background tasks specifically */
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-item.completed .subtask-text {
+  text-decoration-color: var(--mondrian-black) !important;
+  color: #f0f0f0 !important; /* Brighter white for better contrast on red */
+}
+
+/* Main todo completed text styling */
+.mondrian-theme .todo-text.completed {
+  text-decoration: line-through;
+  text-decoration-color: var(--mondrian-red) !important;
+  text-decoration-thickness: 2px;
+  opacity: 0.9;
+  color: #333333 !important; /* Much darker text color instead of light blue */
+  font-weight: 600;
+}
+
+/* Override for red background main todo items */
+.mondrian-theme .todo-list li:nth-child(3n+3) .todo-text.completed {
+  text-decoration-color: var(--mondrian-black) !important;
+  color: #f0f0f0 !important; /* Brighter white for better contrast on red */
 }
 
 /* Subtask checkbox styling */
@@ -700,4 +766,10 @@
   width: 80%;
   max-width: 500px;
   box-sizing: border-box;
+}
+
+/* Subtask hover effect */
+.mondrian-theme .subtask-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--mondrian-black);
 } 
