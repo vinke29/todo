@@ -786,4 +786,139 @@
 .mondrian-theme .subtask-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 0 var(--mondrian-black);
+}
+
+/* History icon styling */
+.mondrian-theme .history-icon {
+  background-color: var(--mondrian-yellow);
+  color: var(--mondrian-black);
+  border: var(--mondrian-border);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .history-icon:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--mondrian-black);
+  color: var(--mondrian-black);
+}
+
+.mondrian-theme .history-icon:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--mondrian-black);
+}
+
+/* History drawer styling */
+.mondrian-theme .history-drawer {
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+  border-left: var(--mondrian-border);
+  box-shadow: none;
+  animation: none;
+}
+
+.mondrian-theme .history-drawer-header {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+  border-bottom: var(--mondrian-border);
+}
+
+.mondrian-theme .history-drawer-header h3 {
+  color: var(--mondrian-white);
+  font-weight: bold;
+}
+
+.mondrian-theme .close-history-btn {
+  color: var(--mondrian-white);
+  font-weight: bold;
+}
+
+.mondrian-theme .close-history-btn:hover {
+  color: var(--mondrian-white);
+  transform: scale(1.2);
+}
+
+.mondrian-theme .history-item {
+  background-color: var(--mondrian-light-grey);
+  border: var(--mondrian-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.mondrian-theme .history-item:nth-child(3n+2) {
+  background-color: var(--mondrian-yellow);
+}
+
+.mondrian-theme .history-item:nth-child(3n+3) {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .history-task-text {
+  color: inherit;
+  font-weight: bold;
+}
+
+.mondrian-theme .history-due-date {
+  color: var(--mondrian-blue);
+  font-weight: 500;
+}
+
+.mondrian-theme .history-done-date {
+  color: #2e8b57; /* dark green */
+  font-weight: 500;
+}
+
+.mondrian-theme .history-subtasks {
+  border-top: 2px solid var(--mondrian-black);
+}
+
+.mondrian-theme .history-subtasks h4 {
+  color: inherit;
+  font-weight: bold;
+}
+
+.mondrian-theme .history-subtask-item {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--mondrian-black);
+}
+
+.mondrian-theme .history-subtask-due-date {
+  color: var(--mondrian-blue);
+}
+
+.mondrian-theme .history-subtask-done-date {
+  color: #2e8b57; /* dark green */
+}
+
+.mondrian-theme .history-item:nth-child(3n+3) .history-due-date,
+.mondrian-theme .history-item:nth-child(3n+3) .history-done-date,
+.mondrian-theme .history-item:nth-child(3n+3) .history-subtask-due-date,
+.mondrian-theme .history-item:nth-child(3n+3) .history-subtask-done-date {
+  color: var(--mondrian-white);
+  font-weight: 600;
+}
+
+.mondrian-theme .history-item:nth-child(3n+3) .history-subtask-done-date {
+  color: var(--mondrian-white);
+  font-weight: 600;
+}
+
+.mondrian-theme .history-section-title {
+  color: var(--mondrian-black);
+  font-weight: bold;
+  border-bottom: var(--mondrian-border);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mondrian-theme .history-item.active-parent {
+  border-left: 6px solid var(--mondrian-blue);
+}
+
+.mondrian-theme .history-parent-task-text {
+  color: inherit;
+  font-weight: bold;
+  font-style: normal;
+  text-decoration: underline;
 } 

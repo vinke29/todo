@@ -43,6 +43,11 @@ function App() {
   const todoListRef = useRef<HTMLUListElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   
+  // Add state for completed tasks history
+  const [completedTasks, setCompletedTasks] = useState<Todo[]>([]);
+  // Add state for side drawer visibility
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  
   // For app title editing
   const [appTitle, setAppTitle] = useState('Your to-dos');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -123,6 +128,7 @@ function App() {
     const savedTodos = localStorage.getItem('todos');
     const savedTitle = localStorage.getItem('appTitle');
     const savedTheme = localStorage.getItem('theme') as ThemeType;
+    const savedCompletedTasks = localStorage.getItem('completedTasks');
     
     if (savedTitle) {
       setAppTitle(savedTitle);
@@ -147,6 +153,20 @@ function App() {
         setPreviewTodos(parsedTodos);
       } catch (e) {
         console.error('Error parsing todos from localStorage', e);
+      }
+    }
+
+    if (savedCompletedTasks) {
+      try {
+        const parsedCompletedTasks = JSON.parse(savedCompletedTasks, (key, value) => {
+          if ((key === 'dueDate' || key === 'completedDate') && value) {
+            return new Date(value);
+          }
+          return value;
+        });
+        setCompletedTasks(parsedCompletedTasks);
+      } catch (e) {
+        console.error('Error parsing completedTasks from localStorage', e);
       }
     }
   }, []);
@@ -203,6 +223,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('appTitle', appTitle);
   }, [appTitle]);
+
+  // Save completed tasks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
+  }, [completedTasks]);
 
   // Focus the title input when entering edit mode
   useEffect(() => {
@@ -300,17 +325,32 @@ function App() {
   };
 
   const handleToggleTodo = (id: number) => {
-    // Mark as completed then remove after a short delay to show the checkmark animation
-    setTodos(
-      todos.map(todo => 
-        todo.id === id ? { ...todo, completed: true, completedDate: new Date() } : todo
-      )
-    );
+    // Find the task that's being completed
+    const taskToComplete = todos.find(todo => todo.id === id);
     
-    // Remove the completed task after 800ms (longer for better animation)
-    setTimeout(() => {
-      setTodos(todos.filter(todo => todo.id !== id));
-    }, 800);
+    if (taskToComplete) {
+      // Mark task as completed and set the completedDate
+      const completedTask = {
+        ...taskToComplete,
+        completed: true,
+        completedDate: new Date()
+      };
+      
+      // Add to completed tasks history
+      setCompletedTasks(prevCompletedTasks => [completedTask, ...prevCompletedTasks]);
+      
+      // Update the todos list to mark it as completed (for animation)
+      setTodos(
+        todos.map(todo => 
+          todo.id === id ? completedTask : todo
+        )
+      );
+      
+      // Remove the completed task after 800ms (longer for better animation)
+      setTimeout(() => {
+        setTodos(todos.filter(todo => todo.id !== id));
+      }, 800);
+    }
   };
 
   const handleDeleteTodo = (id: number) => {
@@ -902,14 +942,22 @@ function App() {
 
   // Toggle settings menu
   const toggleSettings = () => {
-    setIsSettingsOpen(prev => !prev);
+    setIsSettingsOpen(!isSettingsOpen);
   };
 
-  // Close settings if clicked outside
+  // Toggle history drawer
+  const toggleHistoryDrawer = () => {
+    setIsHistoryDrawerOpen(!isHistoryDrawerOpen);
+  };
+  
   const handleClickOutside = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (isSettingsOpen && !target.closest('.settings-menu') && !target.closest('.settings-icon')) {
       setIsSettingsOpen(false);
+    }
+    
+    if (isHistoryDrawerOpen && !target.closest('.history-drawer') && !target.closest('.history-icon')) {
+      setIsHistoryDrawerOpen(false);
     }
   };
 
@@ -1605,9 +1653,163 @@ function App() {
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 13a3 3 0 100-6 3 3 0 000 6z" fill="currentColor"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M9.957 0a2.5 2.5 0 00-2.5 2.5v.253a7.5 7.5 0 00-1.5.624l-.18-.18a2.5 2.5 0 00-3.536 0 2.5 2.5 0 000 3.536l.18.18a7.5 7.5 0 00-.624 1.5H1.5a2.5 2.5 0 000 5h.253a7.5 7.5 0 00.624 1.5l-.18.18a2.5 2.5 0 103.536 3.536l.18-.18a7.5 7.5 0 001.5.624v.253a2.5 2.5 0 005 0v-.253a7.5 7.5 0 001.5-.624l.18.18a2.5 2.5 0 003.536-3.536l-.18-.18a7.5 7.5 0 00.624-1.5h.253a2.5 2.5 0 000-5h-.253a7.5 7.5 0 00-.624-1.5l.18-.18a2.5 2.5 0 00-3.536-3.536l-.18.18a7.5 7.5 0 00-1.5-.624V2.5A2.5 2.5 0 009.957 0zm0 5a5 5 0 100 10 5 5 0 000-10z" fill="currentColor"/>
+          <path fillRule="evenodd" clipRule="evenodd" d="M8.34 2.55l-1.2 2.4a.5.5 0 01-.67.23l-1.04-.47a1.5 1.5 0 00-1.5.15 7.5 7.5 0 00-1.57 1.57 1.5 1.5 0 00-.15 1.5l.47 1.04a.5.5 0 01-.23.67l-2.4 1.2a1.5 1.5 0 00-.82 1.34v2.24a1.5 1.5 0 00.82 1.34l2.4 1.2a.5.5 0 01.23.67l-.47 1.04a1.5 1.5 0 00.15 1.5 7.5 7.5 0 001.57 1.57 1.5 1.5 0 001.5.15l1.04-.47a.5.5 0 01.67.23l1.2 2.4a1.5 1.5 0 001.34.82h2.24a1.5 1.5 0 001.34-.82l1.2-2.4a.5.5 0 01.67-.23l1.04.47a1.5 1.5 0 001.5-.15 7.5 7.5 0 001.57-1.57 1.5 1.5 0 00.15-1.5l-.47-1.04a.5.5 0 01.23-.67l2.4-1.2a1.5 1.5 0 00.82-1.34V9.93a1.5 1.5 0 00-.82-1.34l-2.4-1.2a.5.5 0 01-.23-.67l.47-1.04a1.5 1.5 0 00-.15-1.5 7.5 7.5 0 00-1.57-1.57 1.5 1.5 0 00-1.5-.15l-1.04.47a.5.5 0 01-.67-.23l-1.2-2.4A1.5 1.5 0 0011.93 0H9.68a1.5 1.5 0 00-1.34.82z" fill="currentColor"/>
         </svg>
       </button>
+      
+      {/* History Icon */}
+      <button 
+        className="history-icon"
+        onClick={toggleHistoryDrawer}
+        title="Task History"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 4V10L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
+        </svg>
+      </button>
+      
+      {/* History Drawer */}
+      {isHistoryDrawerOpen && (
+        <div className="history-drawer">
+          <div className="history-drawer-header">
+            <h3>Recently Completed Tasks</h3>
+            <button 
+              className="close-history-btn"
+              onClick={toggleHistoryDrawer}
+              title="Close history"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="history-content">
+            {/* Filter tasks from the last 7 days */}
+            {completedTasks.length === 0 ? (
+              <div className="no-history">
+                <p>No tasks completed in the last 7 days</p>
+              </div>
+            ) : (
+              <div className="history-list">
+                {/* Completed main tasks with their subtasks */}
+                {completedTasks
+                  .filter(task => {
+                    if (!task.completedDate) return false;
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    return task.completedDate >= sevenDaysAgo;
+                  })
+                  .map(task => (
+                    <div key={task.id} className="history-item">
+                      <div className="history-task-main">
+                        <div className="history-task-header">
+                          <span className="history-task-text">{task.text}</span>
+                          {task.completedDate && (
+                            <span className="history-done-date">
+                              Done: {formatDate(task.completedDate)}
+                            </span>
+                          )}
+                          {task.dueDate && (
+                            <span className="history-due-date">
+                              Due: {formatDate(task.dueDate)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Show completed subtasks */}
+                      {task.subtasks.filter(subtask => subtask.completed).length > 0 && (
+                        <div className="history-subtasks">
+                          <h4>Completed Subtasks</h4>
+                          {task.subtasks
+                            .filter(subtask => subtask.completed)
+                            .map(subtask => (
+                              <div key={subtask.id} className="history-subtask-item">
+                                <span className="history-subtask-text">{subtask.text}</span>
+                                <div className="history-subtask-dates">
+                                  {subtask.dueDate && (
+                                    <span className="history-subtask-due-date">
+                                      Due: {formatDate(subtask.dueDate)}
+                                    </span>
+                                  )}
+                                  {subtask.completedDate && (
+                                    <span className="history-subtask-done-date">
+                                      Done: {formatDate(subtask.completedDate)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+                
+                {/* Check for completed subtasks in active tasks */}
+                {(() => {
+                  // Find all active tasks with completed subtasks
+                  const activeTasks = todos.filter(todo => !todo.completed);
+                  const tasksWithCompletedSubtasks = activeTasks.filter(task => 
+                    task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
+                  );
+                  
+                  if (tasksWithCompletedSubtasks.length > 0) {
+                    return (
+                      <div className="history-section">
+                        <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
+                        
+                        {tasksWithCompletedSubtasks.map(task => {
+                          // Filter subtasks completed in the last 7 days
+                          const recentCompletedSubtasks = task.subtasks.filter(subtask => {
+                            if (!subtask.completed || !subtask.completedDate) return false;
+                            const sevenDaysAgo = new Date();
+                            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                            return subtask.completedDate >= sevenDaysAgo;
+                          });
+                          
+                          if (recentCompletedSubtasks.length === 0) return null;
+                          
+                          return (
+                            <div key={task.id} className="history-item active-parent">
+                              <div className="history-task-main">
+                                <span className="history-parent-task-text">{task.text}</span>
+                              </div>
+                              
+                              <div className="history-subtasks">
+                                {recentCompletedSubtasks.map(subtask => (
+                                  <div key={subtask.id} className="history-subtask-item">
+                                    <span className="history-subtask-text">{subtask.text}</span>
+                                    <div className="history-subtask-dates">
+                                      {subtask.dueDate && (
+                                        <span className="history-subtask-due-date">
+                                          Due: {formatDate(subtask.dueDate)}
+                                        </span>
+                                      )}
+                                      {subtask.completedDate && (
+                                        <span className="history-subtask-done-date">
+                                          Done: {formatDate(subtask.completedDate)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

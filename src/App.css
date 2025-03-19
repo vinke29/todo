@@ -1220,3 +1220,274 @@ button:disabled {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* History Icon */
+.history-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 80px; /* Position to the left of settings icon */
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: #555;
+}
+
+.history-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  color: #61dafb;
+}
+
+.history-icon:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* History Drawer */
+.history-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background-color: white;
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  color: #333;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.history-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.history-drawer-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.close-history-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-history-btn:hover {
+  color: #333;
+}
+
+.history-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.no-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-style: italic;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.history-item {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.history-task-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.history-task-text {
+  font-weight: 500;
+  color: #333;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+.history-due-date, .history-done-date {
+  font-size: 0.8rem;
+  display: block;
+  margin-top: 3px;
+}
+
+.history-due-date {
+  color: #61dafb;
+}
+
+.history-done-date {
+  color: #4bb543;
+}
+
+.history-subtasks {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.history-subtasks h4 {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.history-subtask-item {
+  padding: 8px 10px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.history-subtask-text {
+  font-size: 0.9rem;
+  color: #444;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.history-subtask-dates {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-subtask-due-date, .history-subtask-done-date {
+  font-size: 0.7rem;
+}
+
+.history-subtask-due-date {
+  color: #61dafb;
+}
+
+.history-subtask-done-date {
+  color: #4bb543;
+}
+
+/* Add dark mode versions of the new components for the main app theme */
+.App-header .history-drawer {
+  background-color: #282c34;
+  color: white;
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.App-header .history-drawer-header {
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.App-header .history-drawer-header h3 {
+  color: white;
+}
+
+.App-header .close-history-btn {
+  color: #ccc;
+}
+
+.App-header .close-history-btn:hover {
+  color: white;
+}
+
+.App-header .history-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.App-header .history-task-text {
+  color: white;
+}
+
+.App-header .history-subtasks h4 {
+  color: #ccc;
+}
+
+.App-header .history-subtask-item {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.App-header .history-subtask-text {
+  color: #eee;
+}
+
+.App-header .no-history {
+  color: #aaa;
+}
+
+.history-section {
+  margin-top: 20px;
+}
+
+.history-section-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  margin: 0 0 15px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.history-item.active-parent {
+  border-left: 4px solid #61dafb;
+}
+
+.history-parent-task-text {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+  margin-bottom: 5px;
+  font-style: italic;
+}
+
+.App-header .history-section-title {
+  color: #ccc;
+  border-bottom: 1px solid #333;
+}
+
+.App-header .history-item.active-parent {
+  border-left: 4px solid #61dafb;
+}
+
+.App-header .history-parent-task-text {
+  color: #ddd;
+}
