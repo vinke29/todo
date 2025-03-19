@@ -2075,9 +2075,9 @@ function App() {
                 endDate.setHours(23, 59, 59, 999); // End of day
               }
               
-              // Count completed tasks in the time period
-              const completedTasks = todos.filter(task => 
-                task.completed && task.completedDate && (
+              // Count completed tasks in the time period - check completedTasks array
+              const filteredCompletedTasks = completedTasks.filter(task => 
+                task.completedDate && (
                   historyTimeFilter === 'custom' && customDateRange.end
                     ? task.completedDate >= filterDate && task.completedDate <= endDate
                     : task.completedDate >= filterDate
@@ -2092,7 +2092,7 @@ function App() {
               let subtasksWithDueDate = 0;
               
               // Calculate average completion time for tasks and count subtasks
-              completedTasks.forEach((task: Todo) => {
+              filteredCompletedTasks.forEach((task: Todo) => {
                 if (task.completedDate && task.dueDate) {
                   const completionTime = Math.max(0, (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24));
                   taskCompletionTimes += completionTime;
@@ -2178,14 +2178,14 @@ function App() {
               }
               
               // Only show the stats if we have completed tasks or subtasks
-              if (completedTasks.length > 0 || completedSubtasks > 0) {
+              if (filteredCompletedTasks.length > 0 || completedSubtasks > 0) {
                 return (
                   <div className="productivity-stats">
                     <h3 className="stats-header">
-                      <span role="img" aria-label="celebration">🎉</span> Your Productivity
+                      <span role="img" aria-label="celebration">🎯</span> Your Productivity
                     </h3>
                     <div className="stats-message">
-                      Hooray! You've finished <strong>{completedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.
+                      Hooray! You've finished <strong>{filteredCompletedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.
                       {tasksWithDueDate > 0 && (
                         <p>Each task took an average of <strong>{avgTaskCompletionTime}</strong> days relative to due date.</p>
                       )}

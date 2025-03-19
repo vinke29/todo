@@ -1692,7 +1692,10 @@ button:disabled {
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
+  text-align: center;
 }
 
 .stats-message {
