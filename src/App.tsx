@@ -9,6 +9,7 @@ interface Subtask {
   text: string;
   completed: boolean;
   dueDate: Date | null;
+  completedDate: Date | null; // Adding completed date tracking
 }
 
 interface Todo {
@@ -16,6 +17,7 @@ interface Todo {
   text: string;
   completed: boolean;
   dueDate: Date | null;
+  completedDate: Date | null; // Adding completed date tracking
   subtasks: Subtask[];
   isExpanded: boolean; // Track if subtasks are expanded/visible
 }
@@ -286,6 +288,7 @@ function App() {
         text: inputValue,
         completed: false,
         dueDate: newTaskDueDate,
+        completedDate: null,
         subtasks: [],
         isExpanded: false
       };
@@ -300,7 +303,7 @@ function App() {
     // Mark as completed then remove after a short delay to show the checkmark animation
     setTodos(
       todos.map(todo => 
-        todo.id === id ? { ...todo, completed: true } : todo
+        todo.id === id ? { ...todo, completed: true, completedDate: new Date() } : todo
       )
     );
     
@@ -666,7 +669,8 @@ function App() {
       id: Date.now(),
       text: newSubtaskText.trim(),
       completed: false,
-      dueDate: null
+      dueDate: null,
+      completedDate: null
     };
 
     // First update the todos state with the new subtask
@@ -749,7 +753,12 @@ function App() {
               ...todo,
               subtasks: todo.subtasks.map(subtask => 
                 subtask.id === subtaskId 
-                  ? { ...subtask, completed: !subtask.completed } 
+                  ? { 
+                      ...subtask, 
+                      completed: !subtask.completed,
+                      // Set completedDate when completed, clear it when uncompleted
+                      completedDate: !subtask.completed ? new Date() : null 
+                    } 
                   : subtask
               )
             } 
@@ -1185,6 +1194,9 @@ function App() {
                                       >{subtask.text}</span>
                                       {subtask.dueDate && (
                                         <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
+                                      )}
+                                      {subtask.completedDate && (
+                                        <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
                                       )}
                                     </>
                                   )}

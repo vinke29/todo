@@ -720,8 +720,21 @@
   padding-left: 0;
 }
 
+.mondrian-theme .subtask-completed-date {
+  font-size: 0.85rem;
+  color: #2e8b57; /* dark green */
+  font-weight: 500;
+  margin-top: 2px;
+  padding-left: 0;
+}
+
 .mondrian-theme .todo-list li:nth-child(3n+3) .subtask-due-date {
   color: var(--mondrian-black);
+  font-weight: 500;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-completed-date {
+  color: #2e8b57; /* dark green */
   font-weight: 500;
 }
 

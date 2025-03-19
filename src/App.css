@@ -750,7 +750,16 @@ button:disabled {
   margin-top: 2px;
   display: inline-block;
   padding: 1px 0;
-  border-radius: 2px;
+}
+
+.subtask-completed-date {
+  font-size: 10px;
+  color: rgba(75, 181, 67, 0.8);
+  margin-top: 2px;
+  margin-left: 8px;
+  display: inline-block;
+  padding: 1px 0;
+  font-weight: 500;
 }
 
 /* App title editing styles */
