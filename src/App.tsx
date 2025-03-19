@@ -594,19 +594,83 @@ function App() {
   // Format date for display
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-    });
+    
+    // Ensure date is actually a Date object
+    let dateObj: Date;
+    try {
+      dateObj = date instanceof Date ? date : new Date(date);
+      
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Invalid date value:', date);
+        return 'Invalid date';
+      }
+      
+      return dateObj.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: dateObj.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+      });
+    } catch (e) {
+      console.error('Error formatting date:', date, e);
+      return 'Invalid date';
+    }
+  };
+  
+  // Determine if a task was completed on time or late
+  const getCompletionStatus = (completedDate: Date | null, dueDate: Date | null): { status: 'on-time' | 'late' | null, label: string } => {
+    if (!completedDate || !dueDate) {
+      return { status: null, label: '' };
+    }
+    
+    try {
+      // Ensure dates are actually Date objects
+      const completedObj = completedDate instanceof Date ? completedDate : new Date(completedDate);
+      const dueObj = dueDate instanceof Date ? dueDate : new Date(dueDate);
+      
+      // Check if dates are valid
+      if (isNaN(completedObj.getTime()) || isNaN(dueObj.getTime())) {
+        console.warn('Invalid date in completion status check:', { completedDate, dueDate });
+        return { status: null, label: '' };
+      }
+      
+      // Reset hours to compare just the dates
+      const completedDay = new Date(completedObj);
+      completedDay.setHours(0, 0, 0, 0);
+      
+      const dueDay = new Date(dueObj);
+      dueDay.setHours(0, 0, 0, 0);
+      
+      if (completedDay <= dueDay) {
+        return { status: 'on-time', label: 'On time' };
+      } else {
+        return { status: 'late', label: 'Late' };
+      }
+    } catch (e) {
+      console.error('Error checking completion status:', { completedDate, dueDate }, e);
+      return { status: null, label: '' };
+    }
   };
   
   // Handle date selection for a task
   const handleDateSelect = (id: number, date: Date) => {
     setTodos(
-      todos.map(todo => 
-        todo.id === id ? { ...todo, dueDate: date } : todo
-      )
+      todos.map(todo => {
+        if (todo.id === id) {
+          // For the updated task, check all subtasks
+          const updatedSubtasks = todo.subtasks.map(subtask => {
+            // If subtask has a due date that is later than the new task due date,
+            // update it to match the task's due date
+            if (subtask.dueDate && subtask.dueDate > date) {
+              return { ...subtask, dueDate: new Date(date) };
+            }
+            return subtask;
+          });
+          
+          return { ...todo, dueDate: date, subtasks: updatedSubtasks };
+        }
+        return todo;
+      })
     );
     
     // Close the calendar
@@ -697,21 +761,43 @@ function App() {
 
   // Add a function to update the parent task date if needed
   const updateParentTaskDate = (todoId: number, subtasks: Subtask[]): void => {
-    const latestSubtaskDate = getLatestSubtaskDate(subtasks);
-    
-    if (!latestSubtaskDate) return;
-    
-    setTodos(prevTodos => 
-      prevTodos.map(todo => {
-        if (todo.id === todoId) {
-          // Only update if the task has no due date or if the latest subtask date is later
-          if (!todo.dueDate || latestSubtaskDate > todo.dueDate) {
-            return { ...todo, dueDate: latestSubtaskDate };
+    setTodos(prevTodos => {
+      const todo = prevTodos.find(t => t.id === todoId);
+      if (!todo) return prevTodos;
+      
+      // If parent task has no due date, set it to the latest subtask date
+      if (!todo.dueDate) {
+        const latestSubtaskDate = getLatestSubtaskDate(subtasks);
+        if (!latestSubtaskDate) return prevTodos;
+        
+        return prevTodos.map(t => 
+          t.id === todoId ? { ...t, dueDate: latestSubtaskDate } : t
+        );
+      } 
+      // If parent task has a due date, update subtasks with later dates to match parent
+      else {
+        const parentDueDate = todo.dueDate; // Store in variable to avoid null error
+        const updatedSubtasks = subtasks.map(subtask => {
+          if (subtask.dueDate && parentDueDate && subtask.dueDate > parentDueDate) {
+            return { ...subtask, dueDate: new Date(parentDueDate) };
           }
+          return subtask;
+        });
+        
+        // Check if any subtasks were updated
+        const someSubtasksUpdated = updatedSubtasks.some((subtask, index) => 
+          subtask.dueDate !== subtasks[index].dueDate
+        );
+        
+        if (someSubtasksUpdated) {
+          return prevTodos.map(t => 
+            t.id === todoId ? { ...t, subtasks: updatedSubtasks } : t
+          );
         }
-        return todo;
-      })
-    );
+      }
+      
+      return prevTodos;
+    });
   };
 
   // Update handleSaveNewSubtask to check dates
@@ -958,6 +1044,10 @@ function App() {
   // Update handleSubtaskDateSelect to check and update parent task date
   const handleSubtaskDateSelect = (todoId: number, subtaskId: number, date: Date) => {
     setTodos(prevTodos => {
+      // Find the parent task
+      const parentTask = prevTodos.find(todo => todo.id === todoId);
+      
+      // Update the subtask with the new date
       const updatedTodos = prevTodos.map(todo => 
         todo.id === todoId 
           ? {
@@ -974,14 +1064,23 @@ function App() {
       // Find the updated todo
       const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
       if (updatedTodo) {
-        // Always recalculate the latest date from all subtasks
-        const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
+        // If parent has a due date and the new subtask date is later,
+        // update the parent task's due date to match the subtask
+        if (parentTask && parentTask.dueDate && date > parentTask.dueDate) {
+          return updatedTodos.map(todo => 
+            todo.id === todoId ? { ...todo, dueDate: new Date(date) } : todo
+          );
+        }
         
-        // Always update the parent task's due date to match the latest subtask date
-        // This ensures if the latest subtask date changes (earlier or later), the parent reflects it
-        return updatedTodos.map(todo => 
-          todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
-        );
+        // If parent has no due date, update it to the latest subtask date
+        if (!parentTask?.dueDate) {
+          const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
+          if (latestDate) {
+            return updatedTodos.map(todo => 
+              todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
+            );
+          }
+        }
       }
       
       return updatedTodos;
@@ -2289,6 +2388,11 @@ function App() {
                                   Due: {formatDate(task.dueDate)}
                                 </span>
                               )}
+                              {task.completedDate && task.dueDate && (
+                                <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
+                                  {getCompletionStatus(task.completedDate, task.dueDate).label}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2318,6 +2422,11 @@ function App() {
                                     {subtask.dueDate && (
                                       <span className="history-subtask-due-date">
                                         Due: {formatDate(subtask.dueDate)}
+                                      </span>
+                                    )}
+                                    {subtask.completedDate && subtask.dueDate && (
+                                      <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
+                                        {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
                                       </span>
                                     )}
                                   </div>
@@ -2396,6 +2505,11 @@ function App() {
                                     {subtask.dueDate && (
                                       <span className="history-subtask-due-date">
                                         Due: {formatDate(subtask.dueDate)}
+                                      </span>
+                                    )}
+                                    {subtask.completedDate && subtask.dueDate && (
+                                      <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
+                                        {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
                                       </span>
                                     )}
                                   </div>
