@@ -30,11 +30,19 @@ function App() {
   // Track if we're in an active drop operation to reduce flickering
   const isActiveDropTargetRef = useRef(false);
   
+  // Debounce clicks on the calendar
+  const calendarClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isCalendarClickPendingRef = useRef(false);
+  
   // Filter only active todos
   const activeTodos = todos.filter(todo => !todo.completed);
   
   // Add state for tracking which task has an open calendar
   const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
+  
+  // Add state for the new task calendar and its selected date
+  const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
+  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
   
   // Load todos from localStorage on initial render
   useEffect(() => {
@@ -114,10 +122,12 @@ function App() {
         id: Date.now(),
         text: inputValue,
         completed: false,
-        dueDate: null
+        dueDate: newTaskDueDate
       };
       setTodos([...todos, newTodo]);
       setInputValue('');
+      // Reset the new task due date after adding
+      setNewTaskDueDate(null);
     }
   };
 
@@ -385,21 +395,93 @@ function App() {
     setCalendarOpenForId(calendarOpenForId === id ? null : id);
   };
 
+  // Toggle calendar visibility for new task with debouncing
+  const toggleNewTaskCalendar = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent double-clicks by debouncing
+    if (isCalendarClickPendingRef.current) return;
+    
+    isCalendarClickPendingRef.current = true;
+    console.log('Calendar icon clicked'); // Debug log
+    
+    // Toggle the calendar visibility
+    setIsNewTaskCalendarOpen(!isNewTaskCalendarOpen);
+    
+    // Close any task calendars if open
+    if (calendarOpenForId !== null) {
+      setCalendarOpenForId(null);
+    }
+    
+    // Reset the debounce flag after 300ms
+    if (calendarClickTimeoutRef.current) {
+      clearTimeout(calendarClickTimeoutRef.current);
+    }
+    
+    calendarClickTimeoutRef.current = setTimeout(() => {
+      isCalendarClickPendingRef.current = false;
+    }, 300);
+  };
+  
+  // Handle date selection for new task
+  const handleNewTaskDateSelect = (date: Date) => {
+    setNewTaskDueDate(date);
+    setIsNewTaskCalendarOpen(false);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (calendarClickTimeoutRef.current) {
+        clearTimeout(calendarClickTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Simple Todo App</h1>
-        <div className="todo-input">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Add a new task"
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-            id="new-task-input"
-            name="new-task"
-          />
-          <button onClick={handleAddTodo}>Add</button>
+        <div className="todo-input-container">
+          <div className="todo-input">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Add a new task"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+              id="new-task-input"
+              name="new-task"
+            />
+            <div className="calendar-icon-wrapper">
+              <button 
+                className="calendar-icon new-task-calendar-icon" 
+                onClick={toggleNewTaskCalendar}
+                aria-label="Select due date for new task"
+                type="button"
+              >
+                📅
+              </button>
+            </div>
+            <button onClick={handleAddTodo} className="add-btn" type="button">Add</button>
+          </div>
+          
+          {newTaskDueDate && (
+            <div className="new-task-due-date">
+              Due: {formatDate(newTaskDueDate)}
+              <button 
+                className="clear-date-btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNewTaskDueDate(null);
+                }}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
         
         <div className="todo-container">
@@ -596,6 +678,91 @@ function App() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Calendar overlay for new task */}
+      {isNewTaskCalendarOpen && (
+        <div 
+          className="calendar-modal-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsNewTaskCalendarOpen(false);
+          }}
+        >
+          <div 
+            className="calendar-popup-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="calendar-popup">
+              <div className="calendar-header">
+                <div className="month-title">
+                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsNewTaskCalendarOpen(false);
+                  }}
+                  className="close-btn"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="calendar-content">
+                <div className="weekday-header">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                    <div key={day} className="weekday">{day}</div>
+                  ))}
+                </div>
+                
+                <div className="calendar-days">
+                  {(() => {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = today.getMonth();
+                    
+                    // Get first day of month and total days
+                    const firstDayOfMonth = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    
+                    // Create array for calendar days
+                    const days = [];
+                    
+                    // Add empty spaces for days before the first of month
+                    for (let i = 0; i < firstDayOfMonth; i++) {
+                      days.push(<div key={`empty-${i}`} className="empty-day"></div>);
+                    }
+                    
+                    // Add days of month
+                    for (let i = 1; i <= daysInMonth; i++) {
+                      const date = new Date(year, month, i);
+                      const isSelected = newTaskDueDate && 
+                                        newTaskDueDate.getDate() === i && 
+                                        newTaskDueDate.getMonth() === month && 
+                                        newTaskDueDate.getFullYear() === year;
+                      
+                      days.push(
+                        <button 
+                          key={i}
+                          className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNewTaskDateSelect(date);
+                          }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    
+                    return days;
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

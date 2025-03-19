@@ -38,11 +38,18 @@
   }
 }
 
-.todo-input {
-  margin: 20px 0;
+.todo-input-container {
   display: flex;
+  flex-direction: column;
   width: 80%;
   max-width: 500px;
+  margin: 20px 0;
+}
+
+.todo-input {
+  display: flex;
+  position: relative;
+  width: 100%;
 }
 
 .todo-input input {
@@ -52,9 +59,47 @@
   border: none;
   border-radius: 4px 0 0 4px;
   outline: none;
+  padding-right: 40px; /* Make space for the calendar icon */
 }
 
-.todo-input button {
+.calendar-icon-wrapper {
+  position: absolute;
+  right: 85px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.new-task-calendar-icon {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: rgba(97, 218, 251, 0.7);
+  cursor: pointer;
+  padding: 10px;
+  margin: 0;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.new-task-calendar-icon:hover {
+  color: #61dafb;
+  transform: scale(1.2);
+}
+
+.new-task-calendar-icon:focus {
+  outline: none;
+  color: #61dafb;
+}
+
+.add-btn {
   padding: 10px 20px;
   background-color: #61dafb;
   color: #282c34;
@@ -62,6 +107,34 @@
   border: none;
   border-radius: 0 4px 4px 0;
   cursor: pointer;
+  min-width: 80px;
+}
+
+.new-task-due-date {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 10px;
+  background-color: rgba(97, 218, 251, 0.15);
+  border-radius: 4px;
+  color: #61dafb;
+  font-size: 14px;
+  width: fit-content;
+}
+
+.clear-date-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 5px;
+  margin-left: 8px;
+}
+
+.clear-date-btn:hover {
+  color: white;
 }
 
 .todo-container {
