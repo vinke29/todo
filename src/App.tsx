@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, createRef } from 'react';
 import './App.css';
+import './Mondrian.css';
+import './VanGogh.css';
+import './LeCorbusier.css';
 
 interface Subtask {
   id: number;
@@ -16,6 +19,9 @@ interface Todo {
   subtasks: Subtask[];
   isExpanded: boolean; // Track if subtasks are expanded/visible
 }
+
+// Add new theme types
+type ThemeType = 'default' | 'mondrian' | 'vangogh' | 'lecorbusier' | 'surprise';
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -59,6 +65,21 @@ function App() {
   const calendarClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCalendarClickPendingRef = useRef(false);
   
+  // Replace isMondrianTheme with currentTheme
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>('default');
+  
+  // For surprise theme colors
+  const [surpriseColors, setSurpriseColors] = useState({
+    primary: '#000000',
+    secondary: '#ffffff',
+    accent: '#cccccc',
+    background: '#f0f0f0',
+    text: '#333333'
+  });
+  
+  // For settings menu
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   // Function to sort tasks by due date
   const sortByDueDate = (tasksToSort: Todo[] | Subtask[]): (Todo[] | Subtask[]) => {
     return [...tasksToSort].sort((a, b) => {
@@ -95,13 +116,21 @@ function App() {
   const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
 
-  // Load title from localStorage on initial render
+  // Load theme preference from localStorage on initial render
   useEffect(() => {
     const savedTodos = localStorage.getItem('todos');
     const savedTitle = localStorage.getItem('appTitle');
+    const savedTheme = localStorage.getItem('theme') as ThemeType;
     
     if (savedTitle) {
       setAppTitle(savedTitle);
+    }
+    
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
+      if (savedTheme === 'surprise') {
+        generateSurpriseTheme();
+      }
     }
     
     if (savedTodos) {
@@ -120,7 +149,51 @@ function App() {
     }
   }, []);
 
-  // Save todos and title to localStorage when they change
+  // Save theme preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('theme', currentTheme);
+    if (currentTheme === 'surprise') {
+      generateSurpriseTheme();
+    }
+  }, [currentTheme]);
+
+  // Function to generate random colors for surprise theme
+  const generateSurpriseTheme = () => {
+    const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    setSurpriseColors({
+      primary: getRandomColor(),
+      secondary: getRandomColor(),
+      accent: getRandomColor(),
+      background: getRandomColor(),
+      text: getRandomColor()
+    });
+  };
+
+  // Apply theme class and surprise theme styles
+  useEffect(() => {
+    document.documentElement.className = currentTheme === 'surprise' ? '' : `${currentTheme}-theme`;
+    if (currentTheme === 'surprise') {
+      document.documentElement.style.setProperty('--surprise-primary', surpriseColors.primary);
+      document.documentElement.style.setProperty('--surprise-secondary', surpriseColors.secondary);
+      document.documentElement.style.setProperty('--surprise-accent', surpriseColors.accent);
+      document.documentElement.style.setProperty('--surprise-background', surpriseColors.background);
+      document.documentElement.style.setProperty('--surprise-text', surpriseColors.text);
+    } else {
+      document.documentElement.style.removeProperty('--surprise-primary');
+      document.documentElement.style.removeProperty('--surprise-secondary');
+      document.documentElement.style.removeProperty('--surprise-accent');
+      document.documentElement.style.removeProperty('--surprise-background');
+      document.documentElement.style.removeProperty('--surprise-text');
+    }
+  }, [currentTheme, surpriseColors]);
+
+  // Replace toggleTheme with setTheme
+  const setTheme = (theme: ThemeType) => {
+    setCurrentTheme(theme);
+    setIsSettingsOpen(false);
+  };
+
+  // Save todos, title, and theme preference to localStorage when they change
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
@@ -818,8 +891,29 @@ function App() {
     }
   };
 
+  // Toggle settings menu
+  const toggleSettings = () => {
+    setIsSettingsOpen(prev => !prev);
+  };
+
+  // Close settings if clicked outside
+  const handleClickOutside = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (isSettingsOpen && !target.closest('.settings-menu') && !target.closest('.settings-icon')) {
+      setIsSettingsOpen(false);
+    }
+  };
+
+  // Add event listener for clicks outside settings
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsOpen]);
+
   return (
-    <div className="App">
+    <div className={`App ${currentTheme === 'surprise' ? 'surprise-theme' : ''}`}>
       <header className="App-header">
         <div 
           className={`app-title-container ${isTitleHovered ? 'hovered' : ''}`}
@@ -1405,6 +1499,103 @@ function App() {
           )}
         </div>
       )}
+      
+      {/* Settings Menu */}
+      {isSettingsOpen && (
+        <div className="settings-menu">
+          <div className="settings-header">
+            <h3>Settings</h3>
+            <button className="close-btn" onClick={toggleSettings}>×</button>
+          </div>
+          <div className="settings-content">
+            <div className="theme-section">
+              <h4>Theme</h4>
+              <div className="theme-options">
+                <div 
+                  className={`theme-option ${currentTheme === 'default' ? 'selected' : ''}`}
+                  onClick={() => setCurrentTheme('default')}
+                >
+                  <div className="theme-preview default-preview">
+                    <div className="preview-header"></div>
+                    <div className="preview-content">
+                      <div className="preview-line"></div>
+                      <div className="preview-line"></div>
+                    </div>
+                  </div>
+                  <span>Default</span>
+                </div>
+
+                <div 
+                  className={`theme-option ${currentTheme === 'mondrian' ? 'selected' : ''}`}
+                  onClick={() => setCurrentTheme('mondrian')}
+                >
+                  <div className="theme-preview mondrian-preview">
+                    <div className="preview-block red"></div>
+                    <div className="preview-block blue"></div>
+                    <div className="preview-block yellow"></div>
+                  </div>
+                  <span>Mondrian</span>
+                </div>
+
+                <div 
+                  className={`theme-option ${currentTheme === 'vangogh' ? 'selected' : ''}`}
+                  onClick={() => setCurrentTheme('vangogh')}
+                >
+                  <div className="theme-preview vangogh-preview">
+                    <div className="preview-sky"></div>
+                    <div className="preview-stars"></div>
+                    <div className="preview-hills"></div>
+                  </div>
+                  <span>Van Gogh</span>
+                </div>
+
+                <div 
+                  className={`theme-option ${currentTheme === 'lecorbusier' ? 'selected' : ''}`}
+                  onClick={() => setCurrentTheme('lecorbusier')}
+                >
+                  <div className="theme-preview lecorbusier-preview">
+                    <div className="preview-grid">
+                      <div className="preview-block"></div>
+                      <div className="preview-block accent"></div>
+                      <div className="preview-block primary"></div>
+                    </div>
+                  </div>
+                  <span>Le Corbusier</span>
+                </div>
+
+                <div 
+                  className={`theme-option ${currentTheme === 'surprise' ? 'selected' : ''}`}
+                  onClick={() => {
+                    setCurrentTheme('surprise');
+                    generateSurpriseTheme();
+                  }}
+                >
+                  <div className="theme-preview surprise-preview">
+                    <div className="preview-random">
+                      <div className="preview-sparkle"></div>
+                      <div className="preview-sparkle"></div>
+                      <div className="preview-sparkle"></div>
+                    </div>
+                  </div>
+                  <span>Surprise Me!</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Icon */}
+      <button 
+        className="settings-icon"
+        onClick={toggleSettings}
+        title="Settings"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 13a3 3 0 100-6 3 3 0 000 6z" fill="currentColor"/>
+          <path fillRule="evenodd" clipRule="evenodd" d="M9.957 0a2.5 2.5 0 00-2.5 2.5v.253a7.5 7.5 0 00-1.5.624l-.18-.18a2.5 2.5 0 00-3.536 0 2.5 2.5 0 000 3.536l.18.18a7.5 7.5 0 00-.624 1.5H1.5a2.5 2.5 0 000 5h.253a7.5 7.5 0 00.624 1.5l-.18.18a2.5 2.5 0 103.536 3.536l.18-.18a7.5 7.5 0 001.5.624v.253a2.5 2.5 0 005 0v-.253a7.5 7.5 0 001.5-.624l.18.18a2.5 2.5 0 003.536-3.536l-.18-.18a7.5 7.5 0 00.624-1.5h.253a2.5 2.5 0 000-5h-.253a7.5 7.5 0 00-.624-1.5l.18-.18a2.5 2.5 0 00-3.536-3.536l-.18.18a7.5 7.5 0 00-1.5-.624V2.5A2.5 2.5 0 009.957 0zm0 5a5 5 0 100 10 5 5 0 000-10z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
   );
 }

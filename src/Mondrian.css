@@ -1,0 +1,487 @@
+/* Mondrian Theme for Todo App */
+:root.mondrian-theme {
+  --mondrian-red: #D42D27;
+  --mondrian-blue: #0D5fb5;
+  --mondrian-yellow: #F9D205;
+  --mondrian-black: #000000;
+  --mondrian-white: #FFFFFF;
+  --mondrian-light-grey: #F5F5F5;
+  --mondrian-border: 3px solid var(--mondrian-black);
+  --mondrian-transition: all 0.3s ease;
+}
+
+/* Apply Mondrian theme to the entire app */
+.mondrian-theme .App {
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+  border: 6px solid var(--mondrian-black);
+  position: relative;
+}
+
+.mondrian-theme .App-header {
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: auto;
+  gap: 10px;
+  padding: 30px;
+  position: relative;
+}
+
+/* App title styling */
+.mondrian-theme .app-title-container {
+  grid-column: 1 / 13;
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+  padding: 20px;
+  margin-bottom: 15px;
+  border: var(--mondrian-border);
+  box-shadow: none;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .app-title-container h1 {
+  color: var(--mondrian-white);
+  margin: 0;
+}
+
+.mondrian-theme .app-title-container.hovered {
+  background-color: #1068c5;
+  box-shadow: none;
+}
+
+/* Todo input container */
+.mondrian-theme .todo-input-container {
+  grid-column: 1 / 13;
+  border: var(--mondrian-border);
+  padding: 15px;
+  margin: 0 0 15px 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.mondrian-theme .todo-input {
+  border: none;
+  width: 100%;
+}
+
+.mondrian-theme .todo-input input {
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  padding: 12px;
+  font-size: 16px;
+  color: var(--mondrian-black);
+  width: calc(100% - 120px);
+}
+
+.mondrian-theme .add-btn {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  padding: 10px 20px;
+  height: 100%;
+  font-weight: bold;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .add-btn:hover {
+  background-color: #c52825;
+}
+
+.mondrian-theme .sort-options {
+  grid-column: 1 / 13;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.mondrian-theme .sort-toggle {
+  background-color: var(--mondrian-yellow);
+  color: var(--mondrian-black);
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  transition: var(--mondrian-transition);
+  padding: 8px 12px;
+  font-size: 14px;
+  margin-left: auto;
+  width: auto;
+  white-space: nowrap;
+}
+
+.mondrian-theme .sort-toggle:hover,
+.mondrian-theme .sort-toggle.active {
+  background-color: #e5c105;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--mondrian-black);
+}
+
+/* Todo container styling */
+.mondrian-theme .todo-container {
+  grid-column: 1 / 13;
+  width: 100%;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 10px;
+}
+
+.mondrian-theme .todo-list {
+  grid-column: 1 / 13;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+/* Alternate task colors based on position */
+.mondrian-theme .todo-list li {
+  margin: 0;
+  padding: 15px;
+  border: var(--mondrian-border);
+  border-radius: 0;
+  box-shadow: none;
+  transition: var(--mondrian-transition);
+  grid-column: span 12;
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+1) {
+  background-color: var(--mondrian-white);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+2) {
+  background-color: var(--mondrian-yellow);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .todo-list li:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 0 var(--mondrian-black);
+}
+
+/* Task text styling */
+.mondrian-theme .todo-text {
+  color: inherit;
+  padding: 4px 6px;
+  border-radius: 0;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .todo-text {
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .todo-text:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .todo-text:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Checkbox styling */
+.mondrian-theme .checkbox {
+  border: 2px solid var(--mondrian-black);
+  background-color: var(--mondrian-white);
+  border-radius: 0;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .checkbox.checked {
+  background-color: var(--mondrian-blue);
+}
+
+/* Buttons styling */
+.mondrian-theme .calendar-icon,
+.mondrian-theme .subtask-toggle,
+.mondrian-theme .add-subtask-btn {
+  color: var(--mondrian-black);
+  background-color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .calendar-icon,
+.mondrian-theme .todo-list li:nth-child(3n+3) .subtask-toggle,
+.mondrian-theme .todo-list li:nth-child(3n+3) .add-subtask-btn {
+  color: var(--mondrian-white);
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.mondrian-theme .calendar-icon:hover,
+.mondrian-theme .subtask-toggle:hover,
+.mondrian-theme .add-subtask-btn:hover {
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+  transform: translateY(-2px);
+}
+
+.mondrian-theme .delete-btn {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .todo-list li:nth-child(3n+3) .delete-btn {
+  background-color: var(--mondrian-black);
+}
+
+.mondrian-theme .delete-btn:hover {
+  background-color: #c52825;
+  transform: translateY(-2px);
+}
+
+/* Subtasks styling */
+.mondrian-theme .subtasks-container {
+  border-top: var(--mondrian-border);
+  margin-top: 15px;
+  padding-top: 15px;
+}
+
+.mondrian-theme .subtask-item {
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  padding: 10px;
+  margin: 8px 0;
+  background-color: var(--mondrian-light-grey);
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .subtask-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .subtask-checkbox {
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+}
+
+.mondrian-theme .subtask-checkbox.checked {
+  background-color: var(--mondrian-blue);
+}
+
+/* Edit inputs */
+.mondrian-theme .edit-input,
+.mondrian-theme .edit-subtask-input,
+.mondrian-theme .new-subtask-input {
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  padding: 8px;
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+}
+
+.mondrian-theme .edit-input:focus,
+.mondrian-theme .edit-subtask-input:focus,
+.mondrian-theme .new-subtask-input:focus {
+  border-color: var(--mondrian-blue);
+  box-shadow: 0 0 0 2px rgba(13, 95, 181, 0.3);
+}
+
+/* Calendar popup */
+.mondrian-theme .calendar-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.mondrian-theme .calendar-popup {
+  background-color: var(--mondrian-white);
+  border: var(--mondrian-border);
+  border-radius: 0;
+  padding: 15px;
+}
+
+.mondrian-theme .calendar-header {
+  border-bottom: 2px solid var(--mondrian-black);
+  padding-bottom: 10px;
+}
+
+.mondrian-theme .month-title {
+  color: var(--mondrian-black);
+  font-weight: bold;
+}
+
+.mondrian-theme .weekday {
+  color: var(--mondrian-black);
+  font-weight: bold;
+}
+
+.mondrian-theme .calendar-day {
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+  border: 1px solid #ddd;
+  border-radius: 0;
+}
+
+.mondrian-theme .calendar-day:hover {
+  background-color: var(--mondrian-yellow);
+}
+
+.mondrian-theme .calendar-day.selected {
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+}
+
+/* Settings menu styling */
+.mondrian-theme .settings-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--mondrian-blue);
+  color: white;
+  border: var(--mondrian-border);
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: var(--mondrian-transition);
+  padding: 0;
+  box-shadow: 4px 4px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .settings-icon:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .settings-icon:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .settings-menu {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background-color: var(--mondrian-white);
+  border: var(--mondrian-border);
+  padding: 0;
+  z-index: 999;
+  width: 200px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mondrian-theme .settings-menu-header {
+  background-color: var(--mondrian-blue);
+  color: white;
+  padding: 10px 15px;
+  font-weight: bold;
+  border-bottom: var(--mondrian-border);
+}
+
+.mondrian-theme .settings-menu-item {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .settings-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mondrian-theme .settings-menu-item:last-child {
+  border-bottom: none;
+}
+
+/* Regular theme settings icon */
+.settings-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #61dafb 0%, #2f95c5 100%);
+  color: white;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.settings-icon:hover {
+  transform: translateY(-3px) rotate(30deg);
+  box-shadow: 0 4px 12px rgba(97, 218, 251, 0.4);
+  background: linear-gradient(135deg, #61dafb 0%, #3aa0d1 100%);
+}
+
+.settings-icon:active {
+  transform: translateY(0) rotate(30deg);
+  box-shadow: 0 2px 4px rgba(97, 218, 251, 0.3);
+}
+
+.settings-menu {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 0;
+  z-index: 999;
+  width: 200px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.settings-menu-header {
+  background-color: #61dafb;
+  color: white;
+  padding: 12px 15px;
+  font-weight: bold;
+}
+
+.settings-menu-item {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.settings-menu-item:hover {
+  background-color: rgba(97, 218, 251, 0.1);
+}
+
+.settings-menu-item:last-child {
+  border-bottom: none;
+}
+
+/* Remove old theme toggle button styles */
+.theme-toggle {
+  display: none;
+}
+
+/* Responsive adjustments for the grid */
+@media (max-width: 768px) {
+  .mondrian-theme .App-header {
+    padding: 15px;
+  }
+} 

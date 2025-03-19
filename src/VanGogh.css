@@ -1,0 +1,206 @@
+/* Van Gogh Theme inspired by Starry Night */
+:root.vangogh-theme {
+  --vangogh-night: #1a4f8c;
+  --vangogh-stars: #f7d859;
+  --vangogh-moon: #fff7d6;
+  --vangogh-hills: #27436b;
+  --vangogh-swirl: #2e5ea0;
+  --vangogh-text: #ffffff;
+  --vangogh-accent: #e3973c;
+  --vangogh-cypress: #0f2d26;
+  --vangogh-transition: all 0.3s ease;
+}
+
+.vangogh-theme .App {
+  background-color: var(--vangogh-night);
+  background-image: 
+    radial-gradient(circle at 20% 20%, var(--vangogh-stars) 1px, transparent 1px),
+    radial-gradient(circle at 80% 40%, var(--vangogh-stars) 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, var(--vangogh-stars) 1px, transparent 1px),
+    radial-gradient(circle at 70% 80%, var(--vangogh-stars) 1px, transparent 1px);
+  background-size: 200px 200px;
+  color: var(--vangogh-text);
+  position: relative;
+  overflow: hidden;
+}
+
+.vangogh-theme .App::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    var(--vangogh-swirl) 0deg 30deg,
+    var(--vangogh-night) 30deg 60deg
+  );
+  opacity: 0.3;
+  animation: swirlAnimation 60s linear infinite;
+  pointer-events: none;
+}
+
+.vangogh-theme .App-header {
+  position: relative;
+  z-index: 1;
+}
+
+/* App title styling */
+.vangogh-theme .app-title-container {
+  background-color: var(--vangogh-hills);
+  color: var(--vangogh-moon);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: var(--vangogh-transition);
+}
+
+.vangogh-theme .app-title-container.hovered {
+  background-color: var(--vangogh-cypress);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Input styling */
+.vangogh-theme .todo-input-container {
+  background-color: var(--vangogh-hills);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.vangogh-theme .todo-input input {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--vangogh-swirl);
+  color: var(--vangogh-text);
+  border-radius: 6px;
+}
+
+.vangogh-theme .todo-input input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.vangogh-theme .add-btn {
+  background-color: var(--vangogh-accent);
+  color: var(--vangogh-text);
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(227, 151, 60, 0.3);
+}
+
+.vangogh-theme .add-btn:hover {
+  background-color: #d38730;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(227, 151, 60, 0.4);
+}
+
+/* Todo items */
+.vangogh-theme .todo-list li {
+  background-color: var(--vangogh-hills);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: var(--vangogh-transition);
+}
+
+.vangogh-theme .todo-list li:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  background-color: var(--vangogh-swirl);
+}
+
+/* Checkbox styling */
+.vangogh-theme .checkbox {
+  border: 2px solid var(--vangogh-stars);
+  background-color: transparent;
+  border-radius: 4px;
+}
+
+.vangogh-theme .checkbox.checked {
+  background-color: var(--vangogh-accent);
+  border-color: var(--vangogh-accent);
+}
+
+/* Button styling */
+.vangogh-theme .calendar-icon,
+.vangogh-theme .subtask-toggle,
+.vangogh-theme .add-subtask-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--vangogh-text);
+  border: none;
+  border-radius: 4px;
+}
+
+.vangogh-theme .calendar-icon:hover,
+.vangogh-theme .subtask-toggle:hover,
+.vangogh-theme .add-subtask-btn:hover {
+  background-color: var(--vangogh-accent);
+  transform: translateY(-2px);
+}
+
+.vangogh-theme .delete-btn {
+  background-color: rgba(255, 87, 87, 0.7);
+  color: var(--vangogh-text);
+  border: none;
+  border-radius: 4px;
+}
+
+.vangogh-theme .delete-btn:hover {
+  background-color: rgba(255, 87, 87, 0.9);
+  transform: translateY(-2px);
+}
+
+/* Subtasks styling */
+.vangogh-theme .subtasks-container {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vangogh-theme .subtask-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 6px;
+}
+
+.vangogh-theme .subtask-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Calendar styling */
+.vangogh-theme .calendar-popup {
+  background-color: var(--vangogh-hills);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.vangogh-theme .calendar-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vangogh-theme .calendar-day {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--vangogh-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.vangogh-theme .calendar-day:hover {
+  background-color: var(--vangogh-accent);
+}
+
+.vangogh-theme .calendar-day.selected {
+  background-color: var(--vangogh-stars);
+  color: var(--vangogh-night);
+}
+
+/* Animations */
+@keyframes swirlAnimation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} 

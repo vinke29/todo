@@ -937,3 +937,277 @@ button:disabled {
   color: white;
   box-shadow: 0 0 8px rgba(97, 218, 251, 0.3);
 }
+
+/* Settings Menu */
+.settings-menu {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  z-index: 1000;
+  width: 560px !important; /* Reduced from 640px */
+  min-width: 560px !important; 
+  max-width: 90vw; /* Still maintain responsiveness for small screens */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  color: #333;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 1rem 0.75rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.theme-section {
+  margin-bottom: 1.25rem;
+  padding: 0 1.5rem;
+}
+
+.theme-section h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Changed to 4 columns for better fit */
+  gap: 1.2rem; /* Slightly reduced gap */
+  margin: 0;
+  padding: 0;
+}
+
+.theme-option {
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.2s ease;
+  padding: 0.5rem;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.theme-option:hover {
+  transform: translateY(-2px);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.theme-option.selected {
+  background: rgba(0, 122, 255, 0.05);
+}
+
+.theme-preview {
+  width: 100%;
+  height: 90px;
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.theme-option.selected .theme-preview {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.theme-option span {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+  margin-top: 0.4rem;
+}
+
+/* Default theme preview */
+.default-preview {
+  background: #f8f9fa;
+}
+
+.default-preview .preview-header {
+  height: 20%;
+  background: #007aff;
+}
+
+.default-preview .preview-content {
+  padding: 8px;
+}
+
+.default-preview .preview-line {
+  height: 8px;
+  background: #e9ecef;
+  margin: 8px 0;
+  border-radius: 4px;
+}
+
+/* Mondrian theme preview */
+.mondrian-preview {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: #000;
+}
+
+.mondrian-preview .preview-block {
+  background: #fff;
+}
+
+.mondrian-preview .preview-block.red {
+  background: #e74c3c;
+  grid-row: span 2;
+}
+
+.mondrian-preview .preview-block.blue {
+  background: #3498db;
+}
+
+.mondrian-preview .preview-block.yellow {
+  background: #f1c40f;
+}
+
+/* Van Gogh theme preview */
+.vangogh-preview {
+  position: relative;
+  background: #1a4f8c;
+  overflow: hidden;
+}
+
+.vangogh-preview .preview-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  background: linear-gradient(to bottom, #1a4f8c, #2e5ea0);
+}
+
+.vangogh-preview .preview-stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  background-image: 
+    radial-gradient(circle at 20% 20%, #f7d859 1px, transparent 1px),
+    radial-gradient(circle at 80% 40%, #f7d859 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, #f7d859 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.vangogh-preview .preview-hills {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: #27436b;
+  clip-path: polygon(0 100%, 30% 50%, 70% 80%, 100% 60%, 100% 100%);
+}
+
+/* Le Corbusier theme preview */
+.lecorbusier-preview {
+  background: #f5f5f5;
+  padding: 4px;
+}
+
+.lecorbusier-preview .preview-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+}
+
+.lecorbusier-preview .preview-block {
+  background: #32343a;
+}
+
+.lecorbusier-preview .preview-block.accent {
+  background: #f1c40f;
+}
+
+.lecorbusier-preview .preview-block.primary {
+  background: #b33f3e;
+}
+
+/* Surprise theme preview */
+.surprise-preview {
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  position: relative;
+  overflow: hidden;
+}
+
+.surprise-preview .preview-random {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.surprise-preview .preview-sparkle {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  animation: sparkle 1.5s infinite;
+}
+
+.surprise-preview .preview-sparkle:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.surprise-preview .preview-sparkle:nth-child(3) {
+  animation-delay: 1s;
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(0.3); opacity: 0.3; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+/* Settings Icon */
+.settings-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.settings-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.settings-icon:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
