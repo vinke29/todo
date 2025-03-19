@@ -1040,6 +1040,92 @@ function App() {
     setIsHistoryDrawerOpen(!isHistoryDrawerOpen);
   };
   
+  // Add a new function to restore a completed task back to active tasks
+  const handleRestoreTask = (taskId: number) => {
+    // Find the task in completed tasks
+    const taskToRestore = completedTasks.find(task => task.id === taskId);
+    
+    if (!taskToRestore) return;
+    
+    // Create a restored version of the task
+    const restoredTask = {
+      ...taskToRestore,
+      completed: false,
+      completedDate: null,
+      // Also restore all subtasks
+      subtasks: taskToRestore.subtasks.map(subtask => ({
+        ...subtask,
+        completed: false,
+        completedDate: null,
+        hidden: false
+      }))
+    };
+    
+    // Add to active todos
+    setTodos(prevTodos => [...prevTodos, restoredTask]);
+    
+    // Remove from completed tasks
+    setCompletedTasks(prevCompleted => 
+      prevCompleted.filter(task => task.id !== taskId)
+    );
+  };
+  
+  // Add a new function to restore an individual subtask from a completed task
+  const handleRestoreSubtaskFromCompletedTask = (taskId: number, subtaskId: number) => {
+    // Find the completed task containing this subtask
+    const completedTask = completedTasks.find(task => task.id === taskId);
+    if (!completedTask) return;
+    
+    // Find the subtask to restore
+    const subtaskToRestore = completedTask.subtasks.find(subtask => subtask.id === subtaskId);
+    if (!subtaskToRestore) return;
+    
+    // Create a restored version of the task with the specific subtask marked as not completed
+    const restoredTask: Todo = {
+      ...completedTask,
+      completed: false, // The main task is no longer complete
+      completedDate: null,
+      // Mark only the specific subtask as not completed, keep the others as they were
+      subtasks: completedTask.subtasks.map(subtask => 
+        subtask.id === subtaskId 
+          ? { ...subtask, completed: false, completedDate: null, hidden: false } 
+          : subtask
+      )
+    };
+    
+    // Add the restored task to active todos
+    setTodos(prevTodos => [...prevTodos, restoredTask]);
+    
+    // Remove the task from completed tasks
+    setCompletedTasks(prevCompleted => 
+      prevCompleted.filter(task => task.id !== taskId)
+    );
+  };
+  
+  // Add a new function to restore a completed subtask within an active task
+  const handleRestoreSubtask = (taskId: number, subtaskId: number) => {
+    // Find the task that contains this subtask
+    const task = todos.find(todo => todo.id === taskId);
+    
+    if (!task) return;
+    
+    // Update the subtask to be not completed
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === taskId 
+          ? {
+              ...todo,
+              subtasks: todo.subtasks.map(subtask => 
+                subtask.id === subtaskId
+                  ? { ...subtask, completed: false, completedDate: null, hidden: false }
+                  : subtask
+              )
+            }
+          : todo
+      )
+    );
+  };
+  
   const handleClickOutside = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (isSettingsOpen && !target.closest('.settings-menu') && !target.closest('.settings-icon')) {
@@ -1308,7 +1394,7 @@ function App() {
                               <div className="subtask-main-row">
                                 <div className="subtask-content">
                                   <button
-                                    type="button" 
+                                    type="button"
                                     className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
                                     onClick={() => handleToggleSubtask(todo.id, subtask.id)}
                                     aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
@@ -1801,6 +1887,15 @@ function App() {
                     .map(task => (
                       <div key={task.id} className="history-item">
                         <div className="history-task-main">
+                          <button
+                            type="button"
+                            className={`checkbox checked`}
+                            onClick={() => handleRestoreTask(task.id)}
+                            aria-label="Restore task to active list"
+                            title="Uncheck to restore task"
+                          >
+                            ✓
+                          </button>
                           <div className="history-task-header">
                             <span className="history-task-text">{task.text}</span>
                             {task.completedDate && (
@@ -1822,6 +1917,15 @@ function App() {
                             <h4>Subtasks</h4>
                             {task.subtasks.map(subtask => (
                               <div key={subtask.id} className="history-subtask-item">
+                                <button
+                                  type="button"
+                                  className={`subtask-checkbox checked`}
+                                  onClick={() => handleRestoreSubtaskFromCompletedTask(task.id, subtask.id)}
+                                  aria-label="Restore subtask to a new or existing active task"
+                                  title="Uncheck to restore subtask"
+                                >
+                                  ✓
+                                </button>
                                 <span className="history-subtask-text">{subtask.text}</span>
                                 <div className="history-subtask-dates">
                                   {subtask.dueDate && (
@@ -1879,6 +1983,15 @@ function App() {
                           <div className="history-subtasks">
                             {recentCompletedSubtasks.map(subtask => (
                               <div key={subtask.id} className="history-subtask-item">
+                                <button
+                                  type="button"
+                                  className={`subtask-checkbox checked`}
+                                  onClick={() => handleRestoreSubtask(task.id, subtask.id)}
+                                  aria-label="Restore subtask to incomplete"
+                                  title="Uncheck to restore subtask"
+                                >
+                                  ✓
+                                </button>
                                 <span className="history-subtask-text">{subtask.text}</span>
                                 <div className="history-subtask-dates">
                                   {subtask.dueDate && (
