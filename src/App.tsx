@@ -1289,16 +1289,18 @@ function App() {
           )}
         </div>
         
-        {/* Add sort toggle */}
-        <div className="sort-options">
-          <button 
-            className={`sort-toggle ${sortTasksByDueDate ? 'active' : ''}`}
-            onClick={() => setSortTasksByDueDate(!sortTasksByDueDate)}
-            title={sortTasksByDueDate ? "Disable due date sorting" : "Sort tasks by due date"}
-          >
-            {sortTasksByDueDate ? "✓ " : ""}Sort by due date
-          </button>
-        </div>
+        {/* Add sort toggle - only show when there are active tasks */}
+        {todos.filter(todo => !todo.completed).length > 0 && (
+          <div className="sort-options">
+            <button 
+              className={`sort-toggle ${sortTasksByDueDate ? 'active' : ''}`}
+              onClick={() => setSortTasksByDueDate(!sortTasksByDueDate)}
+              title={sortTasksByDueDate ? "Disable due date sorting" : "Sort tasks by due date"}
+            >
+              {sortTasksByDueDate ? "✓ " : ""}Sort by due date
+            </button>
+          </div>
+        )}
         
         <div className="todo-container">
           <ul ref={todoListRef} className="todo-list">
