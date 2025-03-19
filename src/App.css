@@ -74,6 +74,7 @@
   padding: 0;
   width: 100%;
   margin: 0;
+  position: relative;
 }
 
 .todo-list li {
@@ -81,25 +82,124 @@
   justify-content: space-between;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.1);
-  margin: 10px 0;
+  margin: 15px 0;
   padding: 15px;
   border-radius: 4px;
   text-align: left;
   cursor: grab;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
   position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
+  /* Smoother animations for reordering */
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), 
+              box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1), 
+              opacity 0.25s cubic-bezier(0.2, 0, 0, 1), 
+              background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+              margin 0.25s cubic-bezier(0.2, 0, 0, 1),
+              top 0.25s cubic-bezier(0.2, 0, 0, 1),
+              left 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Specific styling for preview items that are being reordered */
+.preview-item {
+  will-change: transform, opacity;
+}
+
+/* Extended hit zone for todos */
+.todo-list li::after {
+  content: '';
+  position: absolute;
+  top: -15px; /* Extend hit area upward */
+  left: 0;
+  right: 0;
+  height: 30px; /* Larger hit area */
+  z-index: -1;
+}
+
+.todo-list li:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .todo-list li.dragging {
-  opacity: 0.5;
+  opacity: 0.8;
+  background-color: rgba(97, 218, 251, 0.15);
+  box-shadow: 0 10px 20px rgba(97, 218, 251, 0.2);
   transform: scale(0.98);
-  background-color: rgba(97, 218, 251, 0.1);
-  box-shadow: 0 0 10px rgba(97, 218, 251, 0.3);
+  z-index: 100;
+  /* Avoid any transition delay for the dragged item */
+  transition: box-shadow 0.2s ease, 
+              background-color 0.2s ease;
 }
 
 .todo-list li.drag-over {
-  transform: translateY(5px);
-  box-shadow: 0 -5px 0 0 #61dafb;
+  /* Subtle indication without expanding margins */
+  box-shadow: 0 -3px 0 0 #61dafb, 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced drop indicator - more visible and larger */
+.todo-list li.drag-over::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #61dafb;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.5);
+}
+
+/* Enhanced end drop zone with larger hit area and better visibility */
+.end-drop-zone {
+  height: 20px;
+  margin: 10px 0;
+  padding: 15px 0; /* Add invisible padding to increase hit area */
+  margin-top: 5px; /* Offset padding to maintain visual spacing */
+  margin-bottom: 5px;  
+  border-radius: 4px;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+  opacity: 0.3; /* Make always slightly visible during drag */
+}
+
+.end-drop-zone.drag-over {
+  opacity: 1;
+  height: 60px; /* Taller for easier targeting */
+  padding: 10px 0;
+  margin: 15px 0;
+  background-color: rgba(97, 218, 251, 0.15); /* More visible */
+  border-radius: 4px;
+  border: 2px dashed rgba(97, 218, 251, 0.6); /* More prominent border */
+}
+
+.drop-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(97, 218, 251, 0.7);
+  font-size: 24px; /* Larger indicator */
+}
+
+.drop-indicator::before {
+  content: '↓';
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
 }
 
 .todo-item {
@@ -170,20 +270,4 @@
   margin-right: 10px;
   cursor: grab;
   font-size: 14px;
-}
-
-.end-drop-zone {
-  height: 20px;
-  margin: 10px 0;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  opacity: 0;
-}
-
-.end-drop-zone.drag-over {
-  opacity: 0.4;
-  height: 40px;
-  background-color: rgba(97, 218, 251, 0.3);
-  box-shadow: 0 0 10px rgba(97, 218, 251, 0.2);
-  border-radius: 4px;
 }
