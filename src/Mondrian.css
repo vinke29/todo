@@ -726,6 +726,7 @@
   font-weight: 500;
   margin-top: 2px;
   padding-left: 0;
+  display: block; /* Added to ensure it's below the due date */
 }
 
 .mondrian-theme .todo-list li:nth-child(3n+3) .subtask-due-date {
