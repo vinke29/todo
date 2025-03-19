@@ -1713,6 +1713,24 @@ button:disabled {
   font-weight: 600;
 }
 
+.stats-message .on-time {
+  color: #4bb543;
+}
+
+.stats-message .on-time strong {
+  color: #38a32a;
+  font-weight: 600;
+}
+
+.stats-message .late {
+  color: #e74c3c;
+}
+
+.stats-message .late strong {
+  color: #c0392b;
+  font-weight: 600;
+}
+
 .stats-encouragement {
   font-weight: 500;
   color: #4bb543;

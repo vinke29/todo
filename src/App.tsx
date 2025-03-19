@@ -2094,8 +2094,9 @@ function App() {
               // Calculate average completion time for tasks and count subtasks
               filteredCompletedTasks.forEach((task: Todo) => {
                 if (task.completedDate && task.dueDate) {
-                  const completionTime = Math.max(0, (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                  taskCompletionTimes += completionTime;
+                  // Calculate real time difference (can be negative for early completion)
+                  const timeDiff = (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                  taskCompletionTimes += timeDiff;
                   tasksWithDueDate++;
                 }
                 
@@ -2115,8 +2116,9 @@ function App() {
                       completedSubtasks++;
                       
                       if (subtask.dueDate) {
-                        const completionTime = Math.max(0, (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                        subtaskCompletionTimes += completionTime;
+                        // Calculate real time difference (can be negative for early completion)
+                        const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                        subtaskCompletionTimes += timeDiff;
                         subtasksWithDueDate++;
                       }
                     }
@@ -2142,8 +2144,9 @@ function App() {
                       completedSubtasks++;
                       
                       if (subtask.dueDate) {
-                        const completionTime = Math.max(0, (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                        subtaskCompletionTimes += completionTime;
+                        // Calculate real time difference (can be negative for early completion)
+                        const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                        subtaskCompletionTimes += timeDiff;
                         subtasksWithDueDate++;
                       }
                     }
@@ -2151,7 +2154,7 @@ function App() {
                 });
               });
               
-              // Calculate averages
+              // Calculate averages - don't use Math.max to allow negative values (early completion)
               const avgTaskCompletionTime = tasksWithDueDate > 0 
                 ? (taskCompletionTimes / tasksWithDueDate).toFixed(1)
                 : "N/A";
@@ -2177,6 +2180,20 @@ function App() {
                   break;
               }
               
+              // Helper function to create a user-friendly message about completion time
+              const getCompletionMessage = (avgTime: string) => {
+                if (avgTime === "N/A") return "N/A";
+                
+                const timeValue = parseFloat(avgTime);
+                if (timeValue < 0) {
+                  return `completed ${Math.abs(timeValue).toFixed(1)} days before the due date on average`;
+                } else if (timeValue === 0) {
+                  return "completed exactly on the due date";
+                } else {
+                  return `completed ${timeValue} days after the due date on average`;
+                }
+              };
+              
               // Only show the stats if we have completed tasks or subtasks
               if (filteredCompletedTasks.length > 0 || completedSubtasks > 0) {
                 return (
@@ -2185,13 +2202,20 @@ function App() {
                       <span role="img" aria-label="celebration">🎯</span> Your Productivity
                     </h3>
                     <div className="stats-message">
-                      Hooray! You've finished <strong>{filteredCompletedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.
+                      <p>Hooray! You've finished <strong>{filteredCompletedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.</p>
+                      
                       {tasksWithDueDate > 0 && (
-                        <p>Each task took an average of <strong>{avgTaskCompletionTime}</strong> days relative to due date.</p>
+                        <p className={parseFloat(avgTaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
+                          Tasks were <strong>{getCompletionMessage(avgTaskCompletionTime as string)}</strong>.
+                        </p>
                       )}
+                      
                       {subtasksWithDueDate > 0 && (
-                        <p>Each subtask took an average of <strong>{avgSubtaskCompletionTime}</strong> days relative to due date.</p>
+                        <p className={parseFloat(avgSubtaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
+                          Subtasks were <strong>{getCompletionMessage(avgSubtaskCompletionTime as string)}</strong>.
+                        </p>
                       )}
+                      
                       <p className="stats-encouragement">Keep up the good work!</p>
                     </div>
                   </div>
