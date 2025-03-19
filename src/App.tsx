@@ -10,6 +10,7 @@ interface Subtask {
   completed: boolean;
   dueDate: Date | null;
   completedDate: Date | null; // Adding completed date tracking
+  hidden?: boolean; // Add this property to control visibility in the UI
 }
 
 interface Todo {
@@ -329,11 +330,18 @@ function App() {
     const taskToComplete = todos.find(todo => todo.id === id);
     
     if (taskToComplete) {
-      // Mark task as completed and set the completedDate
+      // Mark task and all its subtasks as completed and set the completedDate
+      const now = new Date();
       const completedTask = {
         ...taskToComplete,
         completed: true,
-        completedDate: new Date()
+        completedDate: now,
+        // Also mark all subtasks as completed
+        subtasks: taskToComplete.subtasks.map(subtask => ({
+          ...subtask,
+          completed: true,
+          completedDate: subtask.completedDate || now // Keep original completion date if it exists
+        }))
       };
       
       // Add to completed tasks history
@@ -786,25 +794,107 @@ function App() {
 
   // Toggle subtask completion
   const handleToggleSubtask = (todoId: number, subtaskId: number) => {
-    setTodos(
-      todos.map(todo => 
-        todo.id === todoId 
-          ? {
-              ...todo,
-              subtasks: todo.subtasks.map(subtask => 
-                subtask.id === subtaskId 
-                  ? { 
-                      ...subtask, 
-                      completed: !subtask.completed,
-                      // Set completedDate when completed, clear it when uncompleted
-                      completedDate: !subtask.completed ? new Date() : null 
-                    } 
-                  : subtask
-              )
-            } 
-          : todo
+    const todoToUpdate = todos.find(todo => todo.id === todoId);
+    if (!todoToUpdate) return;
+    
+    // Get the subtask being toggled
+    const subtaskToToggle = todoToUpdate.subtasks.find(subtask => subtask.id === subtaskId);
+    if (!subtaskToToggle) return;
+    
+    // Check if this is completing or uncompleting the subtask
+    const isCompleting = !subtaskToToggle.completed;
+    const now = new Date();
+    
+    // Create the updated subtask with new completion status
+    const updatedSubtask = {
+      ...subtaskToToggle,
+      completed: isCompleting,
+      completedDate: isCompleting ? now : null,
+      // Add a hidden property to control visibility in the main UI
+      hidden: false
+    };
+    
+    // Update the todo with the modified subtask
+    const updatedTodo = {
+      ...todoToUpdate,
+      subtasks: todoToUpdate.subtasks.map(subtask => 
+        subtask.id === subtaskId ? updatedSubtask : subtask
       )
-    );
+    };
+    
+    // Check if all subtasks will be completed after this change
+    const willAllSubtasksBeCompleted = updatedTodo.subtasks.length > 0 && 
+      updatedTodo.subtasks.every(subtask => subtask.id === subtaskId ? isCompleting : subtask.completed);
+    
+    // If completing the subtask and all other subtasks are already complete, mark the parent task as complete
+    if (isCompleting && willAllSubtasksBeCompleted) {
+      // Mark the parent task as complete
+      const completedParentTask = {
+        ...updatedTodo,
+        completed: true,
+        completedDate: now
+      };
+      
+      // Add to completed tasks history
+      setCompletedTasks(prevCompletedTasks => [completedParentTask, ...prevCompletedTasks]);
+      
+      // Update the todos list to mark it as completed (for animation)
+      setTodos(
+        todos.map(todo => 
+          todo.id === todoId ? completedParentTask : todo
+        )
+      );
+      
+      // Remove the completed task after animation
+      setTimeout(() => {
+        setTodos(todos.filter(todo => todo.id !== todoId));
+      }, 800);
+    } else if (isCompleting) {
+      // Just completing a subtask, not the whole task
+      
+      // First update todos to reflect the completed subtask
+      setTodos(
+        todos.map(todo => 
+          todo.id === todoId 
+            ? updatedTodo
+            : todo
+        )
+      );
+      
+      // Instead of removing the subtask, mark it as hidden after animation
+      setTimeout(() => {
+        setTodos(prevTodos => 
+          prevTodos.map(todo => 
+            todo.id === todoId 
+              ? {
+                  ...todo,
+                  subtasks: todo.subtasks.map(subtask => 
+                    subtask.id === subtaskId
+                      ? { ...subtask, hidden: true }
+                      : subtask
+                  )
+                }
+              : todo
+          )
+        );
+      }, 800);
+    } else {
+      // Just uncompleting a subtask - also make it visible again if it was hidden
+      setTodos(
+        todos.map(todo => 
+          todo.id === todoId 
+            ? {
+                ...todo,
+                subtasks: todo.subtasks.map(subtask => 
+                  subtask.id === subtaskId
+                    ? { ...updatedSubtask, hidden: false }
+                    : subtask
+                )
+              }
+            : todo
+        )
+      );
+    }
   };
 
   // Delete a subtask
@@ -1204,76 +1294,82 @@ function App() {
                     {todo.subtasks.length > 0 && (
                       <ul className="subtasks-list">
                         {/* Sort subtasks by due date before rendering */}
-                        {sortByDueDate([...todo.subtasks]).map((subtask) => (
-                          <li
-                            key={subtask.id}
-                            className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
-                          >
-                            <div className="subtask-main-row">
-                              <div className="subtask-content">
-                                <button
-                                  type="button" 
-                                  className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
-                                  onClick={() => handleToggleSubtask(todo.id, subtask.id)}
-                                  aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
-                                >
-                                  {subtask.completed && "✓"}
-                                </button>
-                                <div className="subtask-text-container">
-                                  {editingSubtaskId && editingSubtaskId.subtaskId === subtask.id ? (
-                                    <input
-                                      type="text"
-                                      className="edit-subtask-input"
-                                      value={subtaskText}
-                                      onChange={(e) => setSubtaskText(e.target.value)}
-                                      onBlur={() => handleEditSubtaskSave()}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleEditSubtaskSave();
-                                        if (e.key === 'Escape') handleEditSubtaskCancel();
-                                      }}
-                                      autoFocus
-                                    />
-                                  ) : (
-                                    <>
-                                      <span 
-                                        className="subtask-text"
-                                        onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
-                                        title="Click to edit"
-                                      >{subtask.text}</span>
-                                      {subtask.dueDate && (
-                                        <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
-                                      )}
-                                      {subtask.completedDate && (
-                                        <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
-                                      )}
-                                    </>
-                                  )}
+                        {(sortByDueDate([...todo.subtasks]) as Subtask[])
+                          // Only show non-hidden subtasks in the main UI
+                          .filter((subtask: Subtask) => {
+                            // Check if the subtask is hidden
+                            return !subtask.hidden;
+                          })
+                          .map((subtask: Subtask) => (
+                            <li
+                              key={subtask.id}
+                              className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
+                            >
+                              <div className="subtask-main-row">
+                                <div className="subtask-content">
+                                  <button
+                                    type="button" 
+                                    className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
+                                    onClick={() => handleToggleSubtask(todo.id, subtask.id)}
+                                    aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
+                                  >
+                                    {subtask.completed && "✓"}
+                                  </button>
+                                  <div className="subtask-text-container">
+                                    {editingSubtaskId && editingSubtaskId.subtaskId === subtask.id ? (
+                                      <input
+                                        type="text"
+                                        className="edit-subtask-input"
+                                        value={subtaskText}
+                                        onChange={(e) => setSubtaskText(e.target.value)}
+                                        onBlur={() => handleEditSubtaskSave()}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleEditSubtaskSave();
+                                          if (e.key === 'Escape') handleEditSubtaskCancel();
+                                        }}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <>
+                                        <span 
+                                          className="subtask-text"
+                                          onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
+                                          title="Click to edit"
+                                        >{subtask.text}</span>
+                                        {subtask.dueDate && (
+                                          <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
+                                        )}
+                                        {subtask.completedDate && (
+                                          <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
+                                
+                                {(!editingSubtaskId || editingSubtaskId.subtaskId !== subtask.id) && (
+                                  <div className="subtask-actions">
+                                    <button
+                                      type="button"
+                                      className="subtask-calendar-icon"
+                                      onClick={(e) => toggleSubtaskCalendar(e, todo.id, subtask.id)}
+                                      aria-label="Set subtask due date"
+                                    >
+                                      📅
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="delete-subtask-btn"
+                                      onClick={() => handleDeleteSubtask(todo.id, subtask.id)}
+                                      aria-label="Delete subtask"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                              
-                              {(!editingSubtaskId || editingSubtaskId.subtaskId !== subtask.id) && (
-                                <div className="subtask-actions">
-                                  <button
-                                    type="button"
-                                    className="subtask-calendar-icon"
-                                    onClick={(e) => toggleSubtaskCalendar(e, todo.id, subtask.id)}
-                                    aria-label="Set subtask due date"
-                                  >
-                                    📅
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="delete-subtask-btn"
-                                    onClick={() => handleDeleteSubtask(todo.id, subtask.id)}
-                                    aria-label="Delete subtask"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </li>
-                        ))}
+                            </li>
+                          ))}
                       </ul>
                     )}
                   </div>
@@ -1673,7 +1769,7 @@ function App() {
       {isHistoryDrawerOpen && (
         <div className="history-drawer">
           <div className="history-drawer-header">
-            <h3>Recently Completed Tasks</h3>
+            <h3>Task History</h3>
             <button 
               className="close-history-btn"
               onClick={toggleHistoryDrawer}
@@ -1684,46 +1780,47 @@ function App() {
           </div>
           
           <div className="history-content">
-            {/* Filter tasks from the last 7 days */}
-            {completedTasks.length === 0 ? (
-              <div className="no-history">
-                <p>No tasks completed in the last 7 days</p>
-              </div>
-            ) : (
-              <div className="history-list">
-                {/* Completed main tasks with their subtasks */}
-                {completedTasks
-                  .filter(task => {
-                    if (!task.completedDate) return false;
-                    const sevenDaysAgo = new Date();
-                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                    return task.completedDate >= sevenDaysAgo;
-                  })
-                  .map(task => (
-                    <div key={task.id} className="history-item">
-                      <div className="history-task-main">
-                        <div className="history-task-header">
-                          <span className="history-task-text">{task.text}</span>
-                          {task.completedDate && (
-                            <span className="history-done-date">
-                              Done: {formatDate(task.completedDate)}
-                            </span>
-                          )}
-                          {task.dueDate && (
-                            <span className="history-due-date">
-                              Due: {formatDate(task.dueDate)}
-                            </span>
-                          )}
+            {/* Section for recently completed tasks */}
+            <div className="history-section">
+              <h4 className="history-section-title">Recently Completed Tasks</h4>
+              
+              {completedTasks.length === 0 ? (
+                <div className="no-history">
+                  <p>No tasks completed in the last 7 days</p>
+                </div>
+              ) : (
+                <div className="history-list">
+                  {/* Completed main tasks with their subtasks */}
+                  {completedTasks
+                    .filter(task => {
+                      if (!task.completedDate) return false;
+                      const sevenDaysAgo = new Date();
+                      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                      return task.completedDate >= sevenDaysAgo;
+                    })
+                    .map(task => (
+                      <div key={task.id} className="history-item">
+                        <div className="history-task-main">
+                          <div className="history-task-header">
+                            <span className="history-task-text">{task.text}</span>
+                            {task.completedDate && (
+                              <span className="history-done-date">
+                                Done: {formatDate(task.completedDate)}
+                              </span>
+                            )}
+                            {task.dueDate && (
+                              <span className="history-due-date">
+                                Due: {formatDate(task.dueDate)}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* Show completed subtasks */}
-                      {task.subtasks.filter(subtask => subtask.completed).length > 0 && (
-                        <div className="history-subtasks">
-                          <h4>Completed Subtasks</h4>
-                          {task.subtasks
-                            .filter(subtask => subtask.completed)
-                            .map(subtask => (
+                        
+                        {/* Show all subtasks for completed tasks */}
+                        {task.subtasks.length > 0 && (
+                          <div className="history-subtasks">
+                            <h4>Subtasks</h4>
+                            {task.subtasks.map(subtask => (
                               <div key={subtask.id} className="history-subtask-item">
                                 <span className="history-subtask-text">{subtask.text}</span>
                                 <div className="history-subtask-dates">
@@ -1739,74 +1836,74 @@ function App() {
                                   )}
                                 </div>
                               </div>
-                            ))
-                          }
-                        </div>
-                      )}
-                    </div>
-                  ))
-                }
-                
-                {/* Check for completed subtasks in active tasks */}
-                {(() => {
-                  // Find all active tasks with completed subtasks
-                  const activeTasks = todos.filter(todo => !todo.completed);
-                  const tasksWithCompletedSubtasks = activeTasks.filter(task => 
-                    task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
-                  );
-                  
-                  if (tasksWithCompletedSubtasks.length > 0) {
-                    return (
-                      <div className="history-section">
-                        <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
-                        
-                        {tasksWithCompletedSubtasks.map(task => {
-                          // Filter subtasks completed in the last 7 days
-                          const recentCompletedSubtasks = task.subtasks.filter(subtask => {
-                            if (!subtask.completed || !subtask.completedDate) return false;
-                            const sevenDaysAgo = new Date();
-                            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                            return subtask.completedDate >= sevenDaysAgo;
-                          });
-                          
-                          if (recentCompletedSubtasks.length === 0) return null;
-                          
-                          return (
-                            <div key={task.id} className="history-item active-parent">
-                              <div className="history-task-main">
-                                <span className="history-parent-task-text">{task.text}</span>
-                              </div>
-                              
-                              <div className="history-subtasks">
-                                {recentCompletedSubtasks.map(subtask => (
-                                  <div key={subtask.id} className="history-subtask-item">
-                                    <span className="history-subtask-text">{subtask.text}</span>
-                                    <div className="history-subtask-dates">
-                                      {subtask.dueDate && (
-                                        <span className="history-subtask-due-date">
-                                          Due: {formatDate(subtask.dueDate)}
-                                        </span>
-                                      )}
-                                      {subtask.completedDate && (
-                                        <span className="history-subtask-done-date">
-                                          Done: {formatDate(subtask.completedDate)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    );
+                    ))
                   }
-                  
-                  return null;
-                })()}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+            
+            {/* Section for completed subtasks in active tasks */}
+            {(() => {
+              // Find all active tasks with completed subtasks (including hidden ones)
+              const activeTasks = todos.filter(todo => !todo.completed);
+              const tasksWithCompletedSubtasks = activeTasks.filter(task => 
+                task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
+              );
+              
+              if (tasksWithCompletedSubtasks.length > 0) {
+                return (
+                  <div className="history-section">
+                    <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
+                    
+                    {tasksWithCompletedSubtasks.map(task => {
+                      // Filter subtasks completed in the last 7 days, include hidden ones
+                      const recentCompletedSubtasks = task.subtasks.filter(subtask => {
+                        if (!subtask.completed || !subtask.completedDate) return false;
+                        const sevenDaysAgo = new Date();
+                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                        return subtask.completedDate >= sevenDaysAgo;
+                      });
+                      
+                      if (recentCompletedSubtasks.length === 0) return null;
+                      
+                      return (
+                        <div key={task.id} className="history-item active-parent">
+                          <div className="history-task-main">
+                            <span className="history-parent-task-text">{task.text}</span>
+                          </div>
+                          
+                          <div className="history-subtasks">
+                            {recentCompletedSubtasks.map(subtask => (
+                              <div key={subtask.id} className="history-subtask-item">
+                                <span className="history-subtask-text">{subtask.text}</span>
+                                <div className="history-subtask-dates">
+                                  {subtask.dueDate && (
+                                    <span className="history-subtask-due-date">
+                                      Due: {formatDate(subtask.dueDate)}
+                                    </span>
+                                  )}
+                                  {subtask.completedDate && (
+                                    <span className="history-subtask-done-date">
+                                      Done: {formatDate(subtask.completedDate)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              
+              return null;
+            })()}
           </div>
         </div>
       )}
