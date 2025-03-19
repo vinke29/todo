@@ -1,11 +1,20 @@
 import React, { useState, useRef, useEffect, createRef } from 'react';
 import './App.css';
 
+interface Subtask {
+  id: number;
+  text: string;
+  completed: boolean;
+  dueDate: Date | null;
+}
+
 interface Todo {
   id: number;
   text: string;
   completed: boolean;
   dueDate: Date | null;
+  subtasks: Subtask[];
+  isExpanded: boolean; // Track if subtasks are expanded/visible
 }
 
 function App() {
@@ -24,6 +33,14 @@ function App() {
   const todoListRef = useRef<HTMLUListElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   
+  // For subtasks
+  const [editingSubtaskId, setEditingSubtaskId] = useState<{todoId: number, subtaskId: number} | null>(null);
+  const [subtaskText, setSubtaskText] = useState('');
+  const [addingSubtaskForId, setAddingSubtaskForId] = useState<number | null>(null);
+  const [newSubtaskText, setNewSubtaskText] = useState('');
+  const newSubtaskInputRef = useRef<HTMLInputElement>(null);
+  const editSubtaskInputRef = useRef<HTMLInputElement>(null);
+
   // Store mouse position data to enhance drop detection
   const mousePositionRef = useRef({ x: 0, y: 0 });
   
@@ -40,18 +57,28 @@ function App() {
   // Add state for tracking which task has an open calendar
   const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
   
+  // Add state for tracking which subtask has an open calendar
+  const [calendarOpenForSubtask, setCalendarOpenForSubtask] = useState<{todoId: number, subtaskId: number} | null>(null);
+  
   // Add state for the new task calendar and its selected date
   const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
-  
+
   // Load todos from localStorage on initial render
   useEffect(() => {
     const savedTodos = localStorage.getItem('todos');
     if (savedTodos) {
       try {
-        setTodos(JSON.parse(savedTodos));
+        const parsedTodos = JSON.parse(savedTodos, (key, value) => {
+          if (key === 'dueDate' && value) {
+            return new Date(value);
+          }
+          return value;
+        });
+        setTodos(parsedTodos);
+        setPreviewTodos(parsedTodos);
       } catch (e) {
-        console.error('Failed to parse saved todos');
+        console.error('Error parsing todos from localStorage', e);
       }
     }
   }, []);
@@ -67,6 +94,20 @@ function App() {
       editInputRef.current.focus();
     }
   }, [editingTaskId]);
+
+  // Focus the new subtask input when adding a subtask
+  useEffect(() => {
+    if (addingSubtaskForId !== null && newSubtaskInputRef.current) {
+      newSubtaskInputRef.current.focus();
+    }
+  }, [addingSubtaskForId]);
+
+  // Focus the edit subtask input when editing a subtask
+  useEffect(() => {
+    if (editingSubtaskId !== null && editSubtaskInputRef.current) {
+      editSubtaskInputRef.current.focus();
+    }
+  }, [editingSubtaskId]);
 
   // Update preview todos whenever drag state changes
   useEffect(() => {
@@ -122,7 +163,9 @@ function App() {
         id: Date.now(),
         text: inputValue,
         completed: false,
-        dueDate: newTaskDueDate
+        dueDate: newTaskDueDate,
+        subtasks: [],
+        isExpanded: false
       };
       setTodos([...todos, newTodo]);
       setInputValue('');
@@ -439,6 +482,251 @@ function App() {
     };
   }, []);
 
+  // Toggle task expansion (show/hide subtasks)
+  const toggleTaskExpansion = (id: number) => {
+    setTodos(
+      todos.map(todo => 
+        todo.id === id ? { ...todo, isExpanded: !todo.isExpanded } : todo
+      )
+    );
+  };
+
+  // Add subtask to a todo
+  const handleAddSubtask = (todoId: number) => {
+    setAddingSubtaskForId(todoId);
+    setNewSubtaskText('');
+  };
+
+  // Add a new helper function to find the latest date in subtasks
+  const getLatestSubtaskDate = (subtasks: Subtask[]): Date | null => {
+    if (subtasks.length === 0) return null;
+    
+    let latestDate: Date | null = null;
+    
+    subtasks.forEach(subtask => {
+      if (subtask.dueDate) {
+        if (!latestDate || subtask.dueDate > latestDate) {
+          latestDate = subtask.dueDate;
+        }
+      }
+    });
+    
+    return latestDate;
+  };
+
+  // Add a function to update the parent task date if needed
+  const updateParentTaskDate = (todoId: number, subtasks: Subtask[]): void => {
+    const latestSubtaskDate = getLatestSubtaskDate(subtasks);
+    
+    if (!latestSubtaskDate) return;
+    
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === todoId) {
+          // Only update if the task has no due date or if the latest subtask date is later
+          if (!todo.dueDate || latestSubtaskDate > todo.dueDate) {
+            return { ...todo, dueDate: latestSubtaskDate };
+          }
+        }
+        return todo;
+      })
+    );
+  };
+
+  // Update handleSaveNewSubtask to check dates
+  const handleSaveNewSubtask = (todoId: number) => {
+    if (newSubtaskText.trim() === '') {
+      setAddingSubtaskForId(null);
+      return;
+    }
+
+    const newSubtask: Subtask = {
+      id: Date.now(),
+      text: newSubtaskText.trim(),
+      completed: false,
+      dueDate: null
+    };
+
+    // First update the todos state with the new subtask
+    setTodos(prevTodos => {
+      const updatedTodos = prevTodos.map(todo => 
+        todo.id === todoId 
+          ? { ...todo, subtasks: [...todo.subtasks, newSubtask], isExpanded: true } 
+          : todo
+      );
+      
+      // Find the updated todo to check dates
+      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
+      if (updatedTodo) {
+        // This will be called after the state update
+        setTimeout(() => updateParentTaskDate(todoId, updatedTodo.subtasks), 0);
+      }
+      
+      return updatedTodos;
+    });
+
+    setAddingSubtaskForId(null);
+    setNewSubtaskText('');
+  };
+
+  // Cancel adding subtask
+  const handleCancelAddSubtask = () => {
+    setAddingSubtaskForId(null);
+    setNewSubtaskText('');
+  };
+
+  // Edit a subtask
+  const handleEditSubtaskStart = (todoId: number, subtaskId: number, text: string) => {
+    setEditingSubtaskId({ todoId, subtaskId });
+    setSubtaskText(text);
+  };
+
+  // Cancel subtask editing
+  const handleEditSubtaskCancel = () => {
+    setEditingSubtaskId(null);
+    setSubtaskText('');
+  };
+
+  // Save subtask edit
+  const handleEditSubtaskSave = () => {
+    if (!editingSubtaskId) return;
+    
+    const { todoId, subtaskId } = editingSubtaskId;
+    const trimmedText = subtaskText.trim();
+    
+    if (trimmedText === '') {
+      handleEditSubtaskCancel();
+      return;
+    }
+
+    setTodos(
+      todos.map(todo => 
+        todo.id === todoId 
+          ? {
+              ...todo,
+              subtasks: todo.subtasks.map(subtask => 
+                subtask.id === subtaskId 
+                  ? { ...subtask, text: trimmedText } 
+                  : subtask
+              )
+            } 
+          : todo
+      )
+    );
+
+    setEditingSubtaskId(null);
+    setSubtaskText('');
+  };
+
+  // Toggle subtask completion
+  const handleToggleSubtask = (todoId: number, subtaskId: number) => {
+    setTodos(
+      todos.map(todo => 
+        todo.id === todoId 
+          ? {
+              ...todo,
+              subtasks: todo.subtasks.map(subtask => 
+                subtask.id === subtaskId 
+                  ? { ...subtask, completed: !subtask.completed } 
+                  : subtask
+              )
+            } 
+          : todo
+      )
+    );
+  };
+
+  // Delete a subtask
+  const handleDeleteSubtask = (todoId: number, subtaskId: number) => {
+    setTodos(
+      todos.map(todo => 
+        todo.id === todoId 
+          ? {
+              ...todo,
+              subtasks: todo.subtasks.filter(subtask => subtask.id !== subtaskId)
+            } 
+          : todo
+      )
+    );
+  };
+
+  // Toggle calendar for subtask
+  const toggleSubtaskCalendar = (e: React.MouseEvent, todoId: number, subtaskId: number) => {
+    e.stopPropagation();
+    
+    // Close if the same subtask calendar is already open
+    if (calendarOpenForSubtask && 
+        calendarOpenForSubtask.todoId === todoId && 
+        calendarOpenForSubtask.subtaskId === subtaskId) {
+      setCalendarOpenForSubtask(null);
+    } else {
+      setCalendarOpenForSubtask({ todoId, subtaskId });
+    }
+    
+    // Close any other calendars
+    if (calendarOpenForId !== null) {
+      setCalendarOpenForId(null);
+    }
+    if (isNewTaskCalendarOpen) {
+      setIsNewTaskCalendarOpen(false);
+    }
+  };
+
+  // Update handleSubtaskDateSelect to check and update parent task date
+  const handleSubtaskDateSelect = (todoId: number, subtaskId: number, date: Date) => {
+    setTodos(prevTodos => {
+      const updatedTodos = prevTodos.map(todo => 
+        todo.id === todoId 
+          ? {
+              ...todo,
+              subtasks: todo.subtasks.map(subtask => 
+                subtask.id === subtaskId 
+                  ? { ...subtask, dueDate: date } 
+                  : subtask
+              )
+            } 
+          : todo
+      );
+      
+      // Find the updated todo to check dates
+      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
+      if (updatedTodo) {
+        // Get the latest date from all subtasks
+        const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
+        
+        // If there's a latest date and it's after the parent's date (or parent has no date)
+        if (latestDate && (!updatedTodo.dueDate || latestDate > updatedTodo.dueDate)) {
+          // Update the parent task's date
+          return updatedTodos.map(todo => 
+            todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
+          );
+        }
+      }
+      
+      return updatedTodos;
+    });
+    
+    // Close the calendar
+    setCalendarOpenForSubtask(null);
+  };
+
+  // Handle keyboard events for subtask editing
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (editingSubtaskId) {
+        handleEditSubtaskSave();
+      } else if (addingSubtaskForId !== null) {
+        handleSaveNewSubtask(addingSubtaskForId);
+      }
+    } else if (e.key === 'Escape') {
+      if (editingSubtaskId) {
+        handleEditSubtaskCancel();
+      } else if (addingSubtaskForId !== null) {
+        handleCancelAddSubtask();
+      }
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -487,92 +775,219 @@ function App() {
         <div className="todo-container">
           <ul ref={todoListRef} className="todo-list">
             {/* Use the preview todos for rendering during drag operations */}
-            {previewTodos.map(todo => (
-              <li 
+            {previewTodos.map((todo) => (
+              <li
                 key={todo.id}
                 data-id={todo.id}
-                draggable={editingTaskId !== todo.id}
+                className={`${todo.completed ? 'completed' : ''} ${draggedTaskId === todo.id ? 'dragging' : ''} ${dragOverTaskId === todo.id ? 'drag-over' : ''}`}
+                draggable={true}
                 onDragStart={(e) => handleDragStart(e, todo.id)}
+                onDragEnd={handleDragEnd}
                 onDragOver={(e) => handleDragOver(e, todo.id)}
+                onDragEnter={(e) => handleDragOver(e, todo.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, todo.id)}
-                onDragEnd={handleDragEnd}
-                className={`
-                  ${draggedTaskId === todo.id ? 'dragging' : ''} 
-                  ${dragOverTaskId === todo.id ? 'drag-over' : ''}
-                  ${editingTaskId === todo.id ? 'editing' : ''}
-                  preview-item
-                `}
               >
-                <div className="todo-item">
-                  <button 
-                    className={`checkbox ${todo.completed ? 'checked' : ''}`}
-                    onClick={() => handleToggleTodo(todo.id)}
-                    aria-label="Mark as complete"
-                    disabled={editingTaskId === todo.id}
-                  >
-                    {todo.completed && '✓'}
-                  </button>
-                  
-                  {editingTaskId === todo.id ? (
-                    <input
-                      ref={editInputRef}
-                      type="text"
-                      className="edit-input"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      onBlur={handleEditSave}
-                      onKeyDown={handleEditKeyDown}
-                    />
-                  ) : (
+                <div className="todo-main-row">
+                  <div className="todo-item">
+                    <button 
+                      type="button"
+                      className={`checkbox ${todo.completed ? 'checked' : ''}`} 
+                      onClick={() => handleToggleTodo(todo.id)}
+                      aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
+                    >
+                      {todo.completed && "✓"}
+                    </button>
                     <div className="todo-text-container">
-                      <span className="todo-text">
-                        {todo.text}
-                      </span>
-                      
-                      {todo.dueDate && (
-                        <div className="todo-due-date">
-                          {formatDate(todo.dueDate)}
-                        </div>
+                      {editingTaskId === todo.id ? (
+                        <input
+                          type="text"
+                          className="edit-input"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onBlur={handleEditSave}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave();
+                            if (e.key === 'Escape') handleEditCancel();
+                          }}
+                          ref={editInputRef}
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <span className="todo-text">{todo.text}</span>
+                          {todo.dueDate && (
+                            <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
+                          )}
+                        </>
                       )}
                     </div>
-                  )}
-                </div>
-                <div className="todo-actions">
-                  <button 
-                    className="edit-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditStart(todo.id, todo.text);
-                    }}
-                    aria-label="Edit task"
-                    disabled={editingTaskId === todo.id}
-                  >
-                    ✎
-                  </button>
+                  </div>
                   
-                  <button 
-                    className="calendar-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCalendar(e, todo.id);
-                    }}
-                    aria-label="Select due date"
-                    disabled={editingTaskId === todo.id}
-                  >
-                    📅
-                  </button>
+                  <div className="todo-controls">
+                    {editingTaskId !== todo.id && (
+                      <>
+                        <button
+                          type="button"
+                          className="edit-btn"
+                          onClick={() => handleEditStart(todo.id, todo.text)}
+                          aria-label="Edit task"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          className="calendar-icon"
+                          onClick={(e) => toggleCalendar(e, todo.id)}
+                          aria-label="Set due date"
+                        >
+                          📅
+                        </button>
+                        {todo.subtasks.length > 0 && (
+                          <button
+                            type="button"
+                            className={`subtask-toggle has-subtasks`}
+                            onClick={() => toggleTaskExpansion(todo.id)}
+                            aria-label={todo.isExpanded ? "Hide subtasks" : "Show subtasks"}
+                          >
+                            {todo.isExpanded ? "▼" : "▶"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="add-subtask-btn"
+                          onClick={() => handleAddSubtask(todo.id)}
+                          disabled={editingTaskId === todo.id || addingSubtaskForId !== null || editingSubtaskId !== null}
+                          aria-label="Add subtask"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          className="delete-btn"
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          aria-label="Delete task"
+                        >
+                          ×
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <button 
-                  className="delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTodo(todo.id);
-                  }}
-                  disabled={editingTaskId === todo.id}
-                >
-                  Delete
-                </button>
+                
+                {(todo.isExpanded || addingSubtaskForId === todo.id) && (
+                  <div className="subtasks-container">
+                    {addingSubtaskForId === todo.id && (
+                      <div className="new-subtask-input-container">
+                        <input
+                          type="text"
+                          placeholder="Enter subtask..."
+                          className="new-subtask-input"
+                          value={newSubtaskText}
+                          onChange={(e) => setNewSubtaskText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveNewSubtask(todo.id);
+                            if (e.key === 'Escape') handleCancelAddSubtask();
+                          }}
+                          autoFocus
+                        />
+                        <div className="subtask-input-actions">
+                          <button 
+                            type="button"
+                            className="subtask-save-btn" 
+                            onClick={() => handleSaveNewSubtask(todo.id)}
+                            disabled={!newSubtaskText.trim()}
+                          >
+                            Save
+                          </button>
+                          <button 
+                            type="button"
+                            className="subtask-cancel-btn" 
+                            onClick={handleCancelAddSubtask}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {todo.subtasks.length > 0 && (
+                      <ul className="subtasks-list">
+                        {todo.subtasks.map((subtask) => (
+                          <li
+                            key={subtask.id}
+                            className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
+                          >
+                            <div className="subtask-main-row">
+                              <div className="subtask-content">
+                                <button
+                                  type="button" 
+                                  className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
+                                  onClick={() => handleToggleSubtask(todo.id, subtask.id)}
+                                  aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
+                                >
+                                  {subtask.completed && "✓"}
+                                </button>
+                                <div className="subtask-text-container">
+                                  {editingSubtaskId && editingSubtaskId.subtaskId === subtask.id ? (
+                                    <input
+                                      type="text"
+                                      className="edit-subtask-input"
+                                      value={subtaskText}
+                                      onChange={(e) => setSubtaskText(e.target.value)}
+                                      onBlur={() => handleEditSubtaskSave()}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleEditSubtaskSave();
+                                        if (e.key === 'Escape') handleEditSubtaskCancel();
+                                      }}
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <>
+                                      <span className="subtask-text">{subtask.text}</span>
+                                      {subtask.dueDate && (
+                                        <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {(!editingSubtaskId || editingSubtaskId.subtaskId !== subtask.id) && (
+                                <div className="subtask-actions">
+                                  <button
+                                    type="button"
+                                    className="edit-subtask-btn"
+                                    onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
+                                    aria-label="Edit subtask"
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="subtask-calendar-icon"
+                                    onClick={(e) => toggleSubtaskCalendar(e, todo.id, subtask.id)}
+                                    aria-label="Set subtask due date"
+                                  >
+                                    📅
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="delete-subtask-btn"
+                                    onClick={() => handleDeleteSubtask(todo.id, subtask.id)}
+                                    aria-label="Delete subtask"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -763,6 +1178,101 @@ function App() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Calendar overlay for subtasks */}
+      {calendarOpenForSubtask !== null && (
+        <div 
+          className="calendar-modal-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCalendarOpenForSubtask(null);
+          }}
+        >
+          {todos.map(todo => 
+            todo.id === calendarOpenForSubtask.todoId && 
+            todo.subtasks.map(subtask => 
+              subtask.id === calendarOpenForSubtask.subtaskId && (
+                <div 
+                  key={`subtask-calendar-${todo.id}-${subtask.id}`}
+                  className="calendar-popup-container"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="calendar-popup">
+                    <div className="calendar-header">
+                      <div className="month-title">
+                        {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCalendarOpenForSubtask(null);
+                        }}
+                        className="close-btn"
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="calendar-content">
+                      <div className="weekday-header">
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                          <div key={day} className="weekday">{day}</div>
+                        ))}
+                      </div>
+                      
+                      <div className="calendar-days">
+                        {(() => {
+                          const today = new Date();
+                          const year = today.getFullYear();
+                          const month = today.getMonth();
+                          
+                          // Get first day of month and total days
+                          const firstDayOfMonth = new Date(year, month, 1).getDay();
+                          const daysInMonth = new Date(year, month + 1, 0).getDate();
+                          
+                          // Create array for calendar days
+                          const days = [];
+                          
+                          // Add empty spaces for days before the first of month
+                          for (let i = 0; i < firstDayOfMonth; i++) {
+                            days.push(<div key={`empty-${i}`} className="empty-day"></div>);
+                          }
+                          
+                          // Add days of month
+                          for (let i = 1; i <= daysInMonth; i++) {
+                            const date = new Date(year, month, i);
+                            const isSelected = subtask.dueDate && 
+                                             subtask.dueDate.getDate() === i && 
+                                             subtask.dueDate.getMonth() === month && 
+                                             subtask.dueDate.getFullYear() === year;
+                            
+                            days.push(
+                              <button 
+                                key={i}
+                                className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSubtaskDateSelect(todo.id, subtask.id, date);
+                                }}
+                                type="button"
+                              >
+                                {i}
+                              </button>
+                            );
+                          }
+                          
+                          return days;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            )
+          )}
         </div>
       )}
     </div>
