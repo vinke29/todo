@@ -24,6 +24,8 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null);
   const [isDropEndZone, setIsDropEndZone] = useState(false);
+  // Add state for sorting tasks by due date
+  const [sortTasksByDueDate, setSortTasksByDueDate] = useState(false);
   // IMPORTANT: This is the list we'll show during dragging - a visual preview
   const [previewTodos, setPreviewTodos] = useState<Todo[]>([]);
   // Add state for tracking which task is being edited
@@ -57,8 +59,31 @@ function App() {
   const calendarClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCalendarClickPendingRef = useRef(false);
   
+  // Function to sort tasks by due date
+  const sortByDueDate = (tasksToSort: Todo[] | Subtask[]): (Todo[] | Subtask[]) => {
+    return [...tasksToSort].sort((a, b) => {
+      // Tasks with no due date go to the bottom
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      
+      // Sort by due date (earliest dates first)
+      return a.dueDate.getTime() - b.dueDate.getTime();
+    });
+  };
+  
   // Filter only active todos
-  const activeTodos = todos.filter(todo => !todo.completed);
+  const activeTodos = (() => {
+    // First filter out completed todos
+    let filtered = todos.filter(todo => !todo.completed);
+    
+    // Apply sorting if enabled
+    if (sortTasksByDueDate) {
+      filtered = sortByDueDate(filtered) as Todo[];
+    }
+    
+    return filtered;
+  })();
   
   // Add state for tracking which task has an open calendar
   const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
@@ -144,7 +169,7 @@ function App() {
     // If dragging, rearrange the preview based on current drag state
     updatePreviewOrder();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, draggedTaskId, dragOverTaskId, isDropEndZone, todos]);
+  }, [isDragging, draggedTaskId, dragOverTaskId, isDropEndZone, todos, sortTasksByDueDate]);
 
   // Function to update the preview order based on drag states
   const updatePreviewOrder = () => {
@@ -662,16 +687,30 @@ function App() {
 
   // Delete a subtask
   const handleDeleteSubtask = (todoId: number, subtaskId: number) => {
-    setTodos(
-      todos.map(todo => 
+    setTodos(prevTodos => {
+      const updatedTodos = prevTodos.map(todo => 
         todo.id === todoId 
           ? {
               ...todo,
               subtasks: todo.subtasks.filter(subtask => subtask.id !== subtaskId)
             } 
           : todo
-      )
-    );
+      );
+      
+      // Find the updated todo
+      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
+      if (updatedTodo) {
+        // Recalculate the latest due date from remaining subtasks
+        const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
+        
+        // Update the parent task's due date
+        return updatedTodos.map(todo => 
+          todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
+        );
+      }
+      
+      return updatedTodos;
+    });
   };
 
   // Toggle calendar for subtask
@@ -712,19 +751,17 @@ function App() {
           : todo
       );
       
-      // Find the updated todo to check dates
+      // Find the updated todo
       const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
       if (updatedTodo) {
-        // Get the latest date from all subtasks
+        // Always recalculate the latest date from all subtasks
         const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
         
-        // If there's a latest date and it's after the parent's date (or parent has no date)
-        if (latestDate && (!updatedTodo.dueDate || latestDate > updatedTodo.dueDate)) {
-          // Update the parent task's date
-          return updatedTodos.map(todo => 
-            todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
-          );
-        }
+        // Always update the parent task's due date to match the latest subtask date
+        // This ensures if the latest subtask date changes (earlier or later), the parent reflects it
+        return updatedTodos.map(todo => 
+          todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
+        );
       }
       
       return updatedTodos;
@@ -872,6 +909,17 @@ function App() {
           )}
         </div>
         
+        {/* Add sort toggle */}
+        <div className="sort-options">
+          <button 
+            className={`sort-toggle ${sortTasksByDueDate ? 'active' : ''}`}
+            onClick={() => setSortTasksByDueDate(!sortTasksByDueDate)}
+            title={sortTasksByDueDate ? "Disable due date sorting" : "Sort tasks by due date"}
+          >
+            {sortTasksByDueDate ? "✓ " : ""}Sort by due date
+          </button>
+        </div>
+        
         <div className="todo-container">
           <ul ref={todoListRef} className="todo-list">
             {/* Use the preview todos for rendering during drag operations */}
@@ -1013,7 +1061,8 @@ function App() {
                     
                     {todo.subtasks.length > 0 && (
                       <ul className="subtasks-list">
-                        {todo.subtasks.map((subtask) => (
+                        {/* Sort subtasks by due date before rendering */}
+                        {sortByDueDate([...todo.subtasks]).map((subtask) => (
                           <li
                             key={subtask.id}
                             className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
