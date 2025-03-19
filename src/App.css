@@ -585,9 +585,9 @@ button:disabled {
 
 .calendar-popup {
   position: relative;
-  background-color: #333;
+  background-color: #f0f0f0;
   padding: 15px;
-  border: 1px solid #555;
+  border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   width: 280px;
@@ -609,26 +609,77 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-}
-
-.month-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: #61dafb;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 18px;
-  cursor: pointer;
+  margin-bottom: 15px;
+  position: relative;
   padding: 0 5px;
 }
 
+.month-title {
+  flex-grow: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff; 
+  margin: 0 5px;
+}
+
+.month-nav {
+  background: none;
+  border: none;
+  color: #000;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 12px;
+  transition: transform 0.2s ease;
+  opacity: 1;
+  z-index: 10;
+}
+
+.month-nav:hover {
+  color: #000;
+  transform: scale(1.2);
+}
+
+.month-nav:active {
+  transform: scale(0.9);
+}
+
+/* Dark mode styles for month navigation */
+.App-header .month-nav {
+  color: #000;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.close-btn {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #000;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 5px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
 .close-btn:hover {
-  color: white;
+  background-color: rgba(255, 255, 255, 0.4);
+  color: #000;
 }
 
 .weekday-header {
@@ -640,7 +691,7 @@ button:disabled {
 .weekday {
   text-align: center;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #333;
   padding: 5px 0;
 }
 
@@ -652,9 +703,9 @@ button:disabled {
 
 .calendar-day {
   padding: 8px 0;
-  background: #444;
+  background: #ddd;
   border: none;
-  color: white;
+  color: #333;
   font-size: 12px;
   cursor: pointer;
   border-radius: 4px;
@@ -662,7 +713,7 @@ button:disabled {
 }
 
 .calendar-day:hover {
-  background: #555;
+  background: #ccc;
   transform: scale(1.1);
 }
 
@@ -1672,13 +1723,13 @@ button:disabled {
 
 /* Productivity Stats styles */
 .productivity-stats {
-  background-color: rgba(97, 218, 251, 0.1);
-  border-radius: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
   padding: 16px 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(97, 218, 251, 0.2);
-  transition: all 0.3s ease;
+  margin: 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
 .productivity-stats:hover {
@@ -1687,57 +1738,33 @@ button:disabled {
 }
 
 .stats-header {
-  color: #333;
-  font-size: 1.2rem;
-  margin: 0 0 12px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
+  color: #343a40;
   text-align: center;
+  margin-bottom: 12px;
+  font-size: 1.2rem;
 }
 
 .stats-message {
-  color: #444;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.stats-message p {
-  margin: 8px 0;
-}
-
-.stats-message strong {
-  color: #61dafb;
-  font-weight: 600;
-}
-
-.stats-message .on-time {
-  color: #4bb543;
-}
-
-.stats-message .on-time strong {
-  color: #38a32a;
-  font-weight: 600;
-}
-
-.stats-message .late {
-  color: #e74c3c;
-}
-
-.stats-message .late strong {
-  color: #c0392b;
-  font-weight: 600;
+  color: #495057;
 }
 
 .stats-encouragement {
+  margin-top: 12px;
+  font-style: italic;
+  color: #6c757d;
   font-weight: 500;
-  color: #4bb543;
-  margin-top: 12px !important;
 }
 
-/* Dark mode styles for productivity stats */
+/* New time status indicators */
+.on-time {
+  color: #28a745;
+}
+
+.late {
+  color: #dc3545;
+}
+
+/* Dark mode styles */
 .App-header .productivity-stats {
   background-color: rgba(97, 218, 251, 0.15);
   border-color: rgba(97, 218, 251, 0.3);
@@ -1751,11 +1778,74 @@ button:disabled {
   color: #ddd;
 }
 
-.App-header .stats-message strong {
-  color: #61dafb;
-}
-
 .App-header .stats-encouragement {
   color: #6ddb65;
+}
+
+/* History Drawer Styles */
+.history-due-date {
+  font-size: 0.8em;
+  color: #ff9800;
+  margin-left: 8px;
+}
+
+/* Completion status labels for history items */
+.completion-status {
+  font-size: 0.8em;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  display: inline-block;
+  text-align: center;
+}
+
+.completion-status.on-time {
+  background-color: rgba(75, 181, 67, 0.2);
+  color: #4bb543;
+  border: 1px solid rgba(75, 181, 67, 0.4);
+}
+
+.completion-status.late {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+/* Dark mode styles for completion status */
+.App-header .completion-status.on-time {
+  background-color: rgba(75, 181, 67, 0.3);
+  color: #6ddb65;
+  border-color: rgba(109, 219, 101, 0.4);
+}
+
+.App-header .completion-status.late {
+  background-color: rgba(231, 76, 60, 0.3);
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+/* Dark mode styles for calendar popup */
+.App-header .calendar-popup {
+  background-color: #333;
+  border-color: #555;
+}
+
+.App-header .month-title {
+  color: #fff;
+}
+
+.App-header .weekday {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Dark mode styles for calendar days */
+.App-header .calendar-day {
+  background: #444;
+  color: white;
+}
+
+.App-header .calendar-day:hover {
+  background: #555;
 }
 
