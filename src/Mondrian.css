@@ -721,7 +721,7 @@
 }
 
 .mondrian-theme .todo-list li:nth-child(3n+3) .subtask-due-date {
-  color: var(--mondrian-white);
+  color: var(--mondrian-black);
   font-weight: 500;
 }
 
