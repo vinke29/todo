@@ -79,7 +79,7 @@ function App() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   
   // For history drawer filtering
-  const [historyTimeFilter, setHistoryTimeFilter] = useState<'7days' | '30days' | '90days' | 'custom'>('7days');
+  const [historyTimeFilter, setHistoryTimeFilter] = useState<'7days' | '30days' | 'custom'>('7days');
   const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({
     start: null,
     end: new Date()
@@ -1339,12 +1339,10 @@ function App() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(today.getDate() - 30);
         return thirtyDaysAgo;
-      case '90days':
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(today.getDate() - 90);
-        return ninetyDaysAgo;
       case 'custom':
         return customDateRange.start || new Date(0); // Use earliest possible date if not set
+      default:
+        return new Date(0); // Fallback
     }
   };
 
@@ -2417,19 +2415,15 @@ function App() {
                   className={`filter-tab ${historyTimeFilter === '7days' ? 'active' : ''}`}
                   onClick={() => setHistoryTimeFilter('7days')}
                 >
-                  Last 7 days
+                  <span>Last</span>
+                  <span>7 Days</span>
                 </button>
                 <button 
                   className={`filter-tab ${historyTimeFilter === '30days' ? 'active' : ''}`}
                   onClick={() => setHistoryTimeFilter('30days')}
                 >
-                  Last 30 days
-                </button>
-                <button 
-                  className={`filter-tab ${historyTimeFilter === '90days' ? 'active' : ''}`}
-                  onClick={() => setHistoryTimeFilter('90days')}
-                >
-                  Last 90 days
+                  <span>Last</span>
+                  <span>30 Days</span>
                 </button>
                 <button 
                   className={`filter-tab ${historyTimeFilter === 'custom' ? 'active' : ''}`}
@@ -2438,7 +2432,8 @@ function App() {
                     setIsCustomDatePickerOpen(true);
                   }}
                 >
-                  Custom
+                  <span>Custom</span>
+                  <span>Range</span>
                 </button>
               </div>
               
@@ -2658,9 +2653,6 @@ function App() {
                   break;
                 case '30days':
                   periodText = "in the past 30 days";
-                  break;
-                case '90days':
-                  periodText = "in the past 90 days";
                   break;
                 case 'custom':
                   periodText = "in the selected period";
