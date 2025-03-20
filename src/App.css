@@ -1873,3 +1873,57 @@ button:disabled {
   background: #555;
 }
 
+.completion-message {
+  display: flex;
+  justify-content: center;
+  margin: 30px 0;
+  padding: 20px;
+  background-color: #f0f8ff; /* Light blue background */
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.completion-message span {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #4a90e2; /* Blue text color */
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* For Mondrian theme */
+.mondrian .completion-message {
+  background-color: #fff;
+  border: 3px solid #000;
+  box-shadow: none;
+}
+
+.mondrian .completion-message span {
+  color: #000;
+}
+
+/* For Van Gogh theme */
+.vangogh .completion-message {
+  background-color: #293462;
+  border: none;
+}
+
+.vangogh .completion-message span {
+  color: #f7d06b;
+}
+
+/* For Le Corbusier theme */
+.lecorbusier .completion-message {
+  background-color: #fff;
+  border: 2px solid #b32821;
+}
+
+.lecorbusier .completion-message span {
+  color: #b32821;
+}
+

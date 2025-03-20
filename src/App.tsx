@@ -1441,6 +1441,11 @@ function App() {
         )}
         
         <div className="todo-container">
+          {todos.length === 0 && completedTasks.length > 0 && (
+            <div className="completion-message">
+              <span>🎉 Congrats! You've completed all tasks! 🎉</span>
+            </div>
+          )}
           <ul ref={todoListRef} className="todo-list">
             {/* Use the preview todos for rendering during drag operations */}
             {previewTodos.map((todo) => (
