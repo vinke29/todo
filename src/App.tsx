@@ -26,6 +26,12 @@ interface Todo {
 // Add new theme types
 type ThemeType = 'default' | 'mondrian' | 'vangogh' | 'lecorbusier' | 'surprise';
 
+// Utility function to capitalize the first letter of text
+const capitalizeFirstLetter = (text: string): string => {
+  if (!text || text.length === 0) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -319,7 +325,7 @@ function App() {
     if (inputValue.trim() !== '') {
       const newTodo: Todo = {
         id: Date.now(),
-        text: inputValue,
+        text: capitalizeFirstLetter(inputValue.trim()),
         completed: false,
         dueDate: newTaskDueDate,
         completedDate: null,
@@ -394,10 +400,10 @@ function App() {
       return;
     }
     
-    // Update the todo with the new text
+    // Update the todo with the new text - now with capitalization
     setTodos(
       todos.map(todo => 
-        todo.id === editingTaskId ? { ...todo, text: trimmedText } : todo
+        todo.id === editingTaskId ? { ...todo, text: capitalizeFirstLetter(trimmedText) } : todo
       )
     );
     
@@ -809,7 +815,7 @@ function App() {
 
     const newSubtask: Subtask = {
       id: Date.now(),
-      text: newSubtaskText.trim(),
+      text: capitalizeFirstLetter(newSubtaskText.trim()),
       completed: false,
       dueDate: null,
       completedDate: null
@@ -874,7 +880,7 @@ function App() {
               ...todo,
               subtasks: todo.subtasks.map(subtask => 
                 subtask.id === subtaskId 
-                  ? { ...subtask, text: trimmedText } 
+                  ? { ...subtask, text: capitalizeFirstLetter(trimmedText) } 
                   : subtask
               )
             } 
