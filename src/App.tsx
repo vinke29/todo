@@ -105,7 +105,7 @@ function App() {
   const isCalendarClickPendingRef = useRef(false);
   
   // Replace isMondrianTheme with currentTheme
-  const [currentTheme, setCurrentTheme] = useState<ThemeType>('default');
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>('mondrian');
   
   // For surprise theme colors
   const [surpriseColors, setSurpriseColors] = useState({
@@ -118,6 +118,10 @@ function App() {
   
   // For settings menu
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Add state for Coming Soon modal
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [comingSoonTheme, setComingSoonTheme] = useState('');
   
   // Function to sort tasks by due date
   const sortByDueDate = (tasksToSort: Todo[] | Subtask[]): (Todo[] | Subtask[]) => {
@@ -1622,8 +1626,26 @@ function App() {
     setEditingDetails(null);
   }, []);
 
+  // Function to show Coming Soon modal
+  const showComingSoon = (theme: string) => {
+    setComingSoonTheme(theme);
+    setShowComingSoonModal(true);
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowComingSoonModal(false);
+    }, 3000);
+  };
+
   return (
     <div className={`App ${currentTheme === 'surprise' ? 'surprise-theme' : ''}`}>
+      {/* Add landscape and stars layers for Van Gogh theme */}
+      {currentTheme === 'vangogh' && (
+        <>
+          <div className="landscape-layer"></div>
+          <div className="stars-layer"></div>
+        </>
+      )}
+      
       <header className="App-header">
         <div 
           className={`app-title-container ${isTitleHovered ? 'hovered' : ''}`}
@@ -1724,7 +1746,16 @@ function App() {
         <div className="todo-container">
           {todos.length === 0 && completedTasks.length > 0 && (
             <div className="completion-message">
-              <span>🎉 Congrats! You've completed all tasks! 🎉</span>
+              {currentTheme === 'mondrian' ? (
+                <>
+                  <span>Hooray, you've completed all tasks.</span>
+                  <div className="mondrian-completion-block red"></div>
+                  <div className="mondrian-completion-block blue"></div>
+                  <div className="mondrian-completion-block yellow"></div>
+                </>
+              ) : (
+                <span>🎉 Hooray, you've completed all tasks! 🎉</span>
+              )}
             </div>
           )}
           <ul ref={todoListRef} className="todo-list">
@@ -2297,20 +2328,6 @@ function App() {
               <h4>Theme</h4>
               <div className="theme-options">
                 <div 
-                  className={`theme-option ${currentTheme === 'default' ? 'selected' : ''}`}
-                  onClick={() => setCurrentTheme('default')}
-                >
-                  <div className="theme-preview default-preview">
-                    <div className="preview-header"></div>
-                    <div className="preview-content">
-                      <div className="preview-line"></div>
-                      <div className="preview-line"></div>
-                    </div>
-                  </div>
-                  <span>Default</span>
-                </div>
-
-                <div 
                   className={`theme-option ${currentTheme === 'mondrian' ? 'selected' : ''}`}
                   onClick={() => setCurrentTheme('mondrian')}
                 >
@@ -2323,8 +2340,23 @@ function App() {
                 </div>
 
                 <div 
+                  className={`theme-option ${currentTheme === 'default' ? 'selected' : ''}`}
+                  onClick={() => showComingSoon('Zaha Hadid')}
+                >
+                  <div className="theme-preview default-preview">
+                    <div className="preview-header"></div>
+                    <div className="preview-content">
+                      <div className="preview-line"></div>
+                      <div className="preview-line"></div>
+                    </div>
+                  </div>
+                  <span>Zaha Hadid</span>
+                  <div className="coming-soon-badge">Coming Soon</div>
+                </div>
+
+                <div 
                   className={`theme-option ${currentTheme === 'vangogh' ? 'selected' : ''}`}
-                  onClick={() => setCurrentTheme('vangogh')}
+                  onClick={() => showComingSoon('Van Gogh')}
                 >
                   <div className="theme-preview vangogh-preview">
                     <div className="preview-sky"></div>
@@ -2332,11 +2364,12 @@ function App() {
                     <div className="preview-hills"></div>
                   </div>
                   <span>Van Gogh</span>
+                  <div className="coming-soon-badge">Coming Soon</div>
                 </div>
 
                 <div 
                   className={`theme-option ${currentTheme === 'lecorbusier' ? 'selected' : ''}`}
-                  onClick={() => setCurrentTheme('lecorbusier')}
+                  onClick={() => showComingSoon('Le Corbusier')}
                 >
                   <div className="theme-preview lecorbusier-preview">
                     <div className="preview-grid">
@@ -2346,14 +2379,12 @@ function App() {
                     </div>
                   </div>
                   <span>Le Corbusier</span>
+                  <div className="coming-soon-badge">Coming Soon</div>
                 </div>
 
                 <div 
                   className={`theme-option ${currentTheme === 'surprise' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setCurrentTheme('surprise');
-                    generateSurpriseTheme();
-                  }}
+                  onClick={() => showComingSoon('Surprise Me')}
                 >
                   <div className="theme-preview surprise-preview">
                     <div className="preview-random">
@@ -2363,6 +2394,7 @@ function App() {
                     </div>
                   </div>
                   <span>Surprise Me!</span>
+                  <div className="coming-soon-badge">Coming Soon</div>
                 </div>
               </div>
             </div>
@@ -2377,7 +2409,7 @@ function App() {
         title="Settings"
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M11.4892 3.17094C11.1102 1.60969 8.8898 1.60969 8.51078 3.17094C8.26594 4.17949 7.17543 4.65811 6.22876 4.13176C4.85044 3.33851 3.33851 4.85044 4.13176 6.22876C4.65811 7.17543 4.17949 8.26594 3.17094 8.51078C1.60969 8.8898 1.60969 11.1102 3.17094 11.4892C4.17949 11.7341 4.65811 12.8246 4.13176 13.7712C3.33851 15.1496 4.85044 16.6615 6.22876 15.8682C7.17543 15.3419 8.26594 15.8205 8.51078 16.8291C8.8898 18.3903 11.1102 18.3903 11.4892 16.8291C11.7341 15.8205 12.8246 15.3419 13.7712 15.8682C15.1496 16.6615 16.6615 15.1496 15.8682 13.7712C15.3419 12.8246 15.8205 11.7341 16.8291 11.4892C18.3903 11.1102 18.3903 8.8898 16.8291 8.51078C15.8205 8.26594 15.3419 7.17543 15.8682 6.22876C16.6615 4.85044 15.1496 3.33851 13.7712 4.13176C12.8246 4.65811 11.7341 4.17949 11.4892 3.17094ZM10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z" fill="currentColor"/>
+          <path fillRule="evenodd" clipRule="evenodd" d="M11.4892 3.17094C11.1102 1.60969 8.8898 1.60969 8.51078 3.17094C8.26594 4.17949 7.17543 4.65811 6.22876 4.13176C4.85044 3.33851 3.33851 4.85044 4.13176 6.22876C4.65811 7.17549 4.17949 8.26594 3.17094 8.51078C1.60969 8.8898 1.60969 11.1102 3.17094 11.4892C4.17949 11.7341 4.65811 12.8246 4.13176 13.7712C3.33851 15.1496 4.85044 16.6615 6.22876 15.8682C7.17543 15.3419 8.26594 15.8205 8.51078 16.8291C8.8898 18.3903 11.1102 18.3903 11.4892 16.8291C11.7341 15.8205 12.8246 15.3419 13.7712 15.8682C15.1496 16.6615 16.6615 15.1496 15.8682 13.7712C15.3419 12.8246 15.8205 11.7341 16.8291 11.4892C18.3903 11.1102 18.3903 8.8898 16.8291 8.51078C15.8205 8.26594 15.3419 7.17543 15.8682 6.22876C16.6615 4.85044 15.1496 3.33851 13.7712 4.13176C12.8246 4.65811 11.7341 4.17949 11.4892 3.17094ZM10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z" fill="currentColor"/>
         </svg>
       </button>
       
@@ -3131,6 +3163,20 @@ function App() {
             <div className="details-buttons">
               <button className="save-details" onClick={saveDetailsDrawer}>Save</button>
               <button className="cancel-details" onClick={closeDetailsDrawer}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Coming Soon Modal */}
+      {showComingSoonModal && (
+        <div className="coming-soon-modal-overlay" onClick={() => setShowComingSoonModal(false)}>
+          <div className="coming-soon-modal" onClick={e => e.stopPropagation()}>
+            <div className="coming-soon-modal-content">
+              <div className="coming-soon-icon">🚧</div>
+              <h3>{comingSoonTheme} Theme</h3>
+              <p>We're working on something amazing! This theme will be available soon.</p>
+              <button className="coming-soon-close-btn" onClick={() => setShowComingSoonModal(false)}>Got it!</button>
             </div>
           </div>
         </div>
