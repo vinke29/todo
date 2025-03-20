@@ -1376,9 +1376,10 @@ function App() {
     }
   };
 
-  // Update the openDetailsDrawer function to include dueDate
+  // Update the openDetailsDrawer function to include dueDate and check completedTasks
   const openDetailsDrawer = (type: 'task' | 'subtask', id: number, parentId?: number) => {
     if (type === 'task') {
+      // First check active todos
       const task = todos.find(todo => todo.id === id);
       if (task) {
         setEditingDetails({
@@ -1389,9 +1390,26 @@ function App() {
           dueDate: task.dueDate
         });
         setIsDetailsDrawerOpen(true);
+        return;
+      }
+      
+      // Then check completed tasks if not found in active todos
+      const completedTask = completedTasks.find(todo => todo.id === id);
+      if (completedTask) {
+        setEditingDetails({
+          type,
+          id,
+          title: completedTask.text,
+          notes: completedTask.notes || null,
+          dueDate: completedTask.dueDate
+        });
+        setIsDetailsDrawerOpen(true);
+        return;
       }
     } else if (type === 'subtask') {
       if (!parentId) return;
+      
+      // Check active todos first
       const task = todos.find(todo => todo.id === parentId);
       if (task) {
         const subtask = task.subtasks.find(sub => sub.id === id);
@@ -1405,21 +1423,42 @@ function App() {
             dueDate: subtask.dueDate
           });
           setIsDetailsDrawerOpen(true);
+          return;
+        }
+      }
+      
+      // Then check completed tasks
+      const completedTask = completedTasks.find(todo => todo.id === parentId);
+      if (completedTask) {
+        const subtask = completedTask.subtasks.find(sub => sub.id === id);
+        if (subtask) {
+          setEditingDetails({
+            type,
+            id,
+            parentId,
+            title: subtask.text,
+            notes: subtask.notes || null,
+            dueDate: subtask.dueDate
+          });
+          setIsDetailsDrawerOpen(true);
+          return;
         }
       }
     }
   };
 
-  // Update the saveDetailsDrawer function to handle dueDate
+  // Update the saveDetailsDrawer function to handle dueDate and completedTasks
   const saveDetailsDrawer = () => {
     if (!editingDetails) return;
 
     if (editingDetails.type === 'task') {
-      // Update task with the same date logic as handleDateSelect
+      // First, try to update task in the active todos
+      let foundInActiveTodos = false;
       setTodos(prevTodos => {
         const taskToUpdate = prevTodos.find(todo => todo.id === editingDetails.id);
-        if (!taskToUpdate) return prevTodos;
-
+        if (!taskToUpdate) return prevTodos; // Not found in active todos
+        
+        foundInActiveTodos = true;
         // Apply the same logic as in handleDateSelect
         return prevTodos.map(todo => {
           if (todo.id === editingDetails.id) {
@@ -1443,13 +1482,45 @@ function App() {
           return todo;
         });
       });
+
+      // If not found in active todos, check completed tasks
+      if (!foundInActiveTodos) {
+        setCompletedTasks(prevCompletedTasks => {
+          const taskToUpdate = prevCompletedTasks.find(todo => todo.id === editingDetails.id);
+          if (!taskToUpdate) return prevCompletedTasks;
+
+          return prevCompletedTasks.map(todo => {
+            if (todo.id === editingDetails.id) {
+              // Create new subtasks with adjusted dates if needed
+              const updatedSubtasks = todo.subtasks.map(subtask => {
+                if (editingDetails.dueDate && subtask.dueDate && subtask.dueDate > editingDetails.dueDate) {
+                  // Clone the date to avoid reference issues
+                  return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
+                }
+                return subtask;
+              });
+              
+              return { 
+                ...todo, 
+                text: editingDetails.title,
+                notes: editingDetails.notes || undefined,
+                dueDate: editingDetails.dueDate,
+                subtasks: updatedSubtasks
+              };
+            }
+            return todo;
+          });
+        });
+      }
     } else if (editingDetails.type === 'subtask' && editingDetails.parentId) {
-      // Update subtask with the same date logic as handleSubtaskDateSelect
+      // First try to update subtask in active todos
+      let foundInActiveTodos = false;
       setTodos(prevTodos => {
         // Find the parent task
         const parentTask = prevTodos.find(todo => todo.id === editingDetails.parentId);
         if (!parentTask) return prevTodos;
-
+        
+        foundInActiveTodos = true;
         // First update the subtask with the new details
         let updatedTodos = prevTodos.map(todo => {
           if (todo.id === editingDetails.parentId) {
@@ -1508,6 +1579,39 @@ function App() {
         
         return updatedTodos;
       });
+
+      // If not found in active todos, check completed tasks
+      if (!foundInActiveTodos) {
+        setCompletedTasks(prevCompletedTasks => {
+          // Find the parent task
+          const parentTask = prevCompletedTasks.find(todo => todo.id === editingDetails.parentId);
+          if (!parentTask) return prevCompletedTasks;
+  
+          // Update the subtask with the new details
+          return prevCompletedTasks.map(todo => {
+            if (todo.id === editingDetails.parentId) {
+              const updatedSubtasks = todo.subtasks.map(subtask => {
+                if (subtask.id === editingDetails.id) {
+                  return { 
+                    ...subtask, 
+                    text: editingDetails.title,
+                    notes: editingDetails.notes || undefined,
+                    dueDate: editingDetails.dueDate
+                  };
+                }
+                return subtask;
+              });
+              
+              // No need to update parent task due date for completed tasks
+              return {
+                ...todo,
+                subtasks: updatedSubtasks
+              };
+            }
+            return todo;
+          });
+        });
+      }
     }
 
     // Close the drawer
@@ -2692,7 +2796,12 @@ function App() {
                             ✓
                           </button>
                           <div className="history-task-header">
-                            <span className="history-task-text">{task.text}</span>
+                            <span 
+                              className="history-task-text"
+                              onClick={() => openDetailsDrawer('task', task.id)}
+                              style={{ cursor: 'pointer' }}
+                              title="Click to view details"
+                            >{task.text}</span>
                             <div className="history-date-container">
                               {task.completedDate && (
                                 <span className="history-done-date">
@@ -2728,7 +2837,12 @@ function App() {
                                   ✓
                                 </button>
                                 <div className="history-subtask-content">
-                                  <span className="history-subtask-text">{subtask.text}</span>
+                                  <span 
+                                    className="history-subtask-text"
+                                    onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
+                                    style={{ cursor: 'pointer' }}
+                                    title="Click to view details"
+                                  >{subtask.text}</span>
                                   <div className="history-subtask-dates">
                                     {subtask.completedDate && (
                                       <span className="history-subtask-done-date">
@@ -2795,7 +2909,12 @@ function App() {
                       return (
                         <div key={task.id} className="history-item active-parent">
                           <div className="history-task-main">
-                            <span className="history-parent-task-text">{task.text}</span>
+                            <span 
+                              className="history-parent-task-text"
+                              onClick={() => openDetailsDrawer('task', task.id)}
+                              style={{ cursor: 'pointer' }}
+                              title="Click to view details"
+                            >{task.text}</span>
                           </div>
                           
                           <div className="history-subtasks">
@@ -2811,7 +2930,12 @@ function App() {
                                   ✓
                                 </button>
                                 <div className="history-subtask-content">
-                                  <span className="history-subtask-text">{subtask.text}</span>
+                                  <span 
+                                    className="history-subtask-text"
+                                    onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
+                                    style={{ cursor: 'pointer' }}
+                                    title="Click to view details"
+                                  >{subtask.text}</span>
                                   <div className="history-subtask-dates">
                                     {subtask.completedDate && (
                                       <span className="history-subtask-done-date">
