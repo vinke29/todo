@@ -191,12 +191,13 @@
   flex-grow: 1;
   padding-right: 15px;
   max-width: 60%;
+  min-height: 32px; /* Changed from height to min-height for flexibility */
 }
 
 .todo-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   margin-right: 5px;
 }
 
@@ -208,13 +209,18 @@
   background-color: transparent;
   color: #282c34;
   font-weight: bold;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-right: 12px;
   cursor: pointer;
   padding: 0;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  align-self: center;
+  position: relative;
+  top: -1px; /* Fine-tune vertical alignment */
+  vertical-align: middle;
 }
 
 .checkbox.checked {
@@ -226,6 +232,8 @@
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
+  justify-content: center;
+  margin: 0 0 4px 0; /* Added bottom margin to create space for dates */
 }
 
 .todo-text {
@@ -236,8 +244,12 @@
   cursor: pointer;
   position: relative;
   transition: color 0.2s ease, transform 0.1s ease;
-  padding: 2px 4px;
+  padding: 0 4px;
   border-radius: 3px;
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
+  vertical-align: middle;
 }
 
 .todo-text:hover {
@@ -256,12 +268,17 @@
   background-color: #e74c3c;
   color: white;
   border: none;
-  padding: 5px 10px;
+  padding: 0;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
   white-space: nowrap;
   transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .delete-btn:hover {
@@ -294,10 +311,11 @@
 .todo-due-date {
   font-size: 12px;
   color: #61dafb;
-  margin-top: 4px;
+  margin-top: 6px;
   display: inline-block;
   padding: 2px 0;
   border-radius: 3px;
+  clear: both;
 }
 
 /* Action buttons styling */
@@ -313,6 +331,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .edit-btn:hover, .calendar-icon:hover, .subtask-toggle:hover, .add-subtask-btn:hover {
@@ -335,7 +355,7 @@
   width: 100%;
   margin-top: 15px;
   border-top: 1px solid rgba(97, 218, 251, 0.2);
-  padding-top: 15px;
+  padding-top: 10px; /* Slightly reduced */
   padding-left: 0;
   padding-right: 0;
   box-sizing: border-box;
@@ -354,7 +374,7 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  padding: 10px 12px;
+  padding: 10px 12px 12px 12px; /* Added extra bottom padding */
   margin: 8px 0;
   border-radius: 6px;
   background-color: rgba(255, 255, 255, 0.05);
@@ -385,15 +405,16 @@
   align-items: center;
   flex-grow: 1;
   max-width: 70%;
-  overflow: hidden;
-  min-width: 0; /* This allows the flex item to shrink below its content size */
+  overflow: visible; /* Changed from hidden to prevent date overflow issues */
+  min-width: 0;
+  min-height: 28px;
 }
 
 .subtask-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0; /* Prevent the actions from shrinking */
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .edit-subtask-btn,
@@ -410,6 +431,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 .edit-subtask-btn:hover,
@@ -421,6 +444,18 @@
 
 .delete-subtask-btn {
   color: rgba(231, 76, 60, 0.7);
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 .delete-subtask-btn:hover {
@@ -766,7 +801,7 @@ button:disabled {
   background-color: transparent;
   color: #282c34;
   font-weight: bold;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-right: 12px;
@@ -774,6 +809,11 @@ button:disabled {
   padding: 0;
   transition: all 0.2s ease;
   font-size: 10px;
+  flex-shrink: 0;
+  align-self: center;
+  position: relative;
+  top: -1px; /* Fine-tune vertical alignment */
+  vertical-align: middle;
 }
 
 .subtask-checkbox.checked {
@@ -785,7 +825,9 @@ button:disabled {
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
-  min-width: 0; /* This allows the flex item to shrink below its content size */
+  min-width: 0;
+  justify-content: center;
+  margin: 0 0 4px 0; /* Added bottom margin to create space for dates */
 }
 
 .subtask-text {
@@ -797,8 +839,12 @@ button:disabled {
   cursor: pointer;
   position: relative;
   transition: color 0.2s ease, transform 0.1s ease;
-  padding: 2px 4px;
+  padding: 0 4px;
   border-radius: 3px;
+  display: inline-block;
+  min-height: 18px;
+  line-height: 18px;
+  vertical-align: middle;
 }
 
 .subtask-text:hover {
@@ -822,19 +868,21 @@ button:disabled {
 .subtask-due-date {
   font-size: 10px;
   color: rgba(97, 218, 251, 0.7);
-  margin-top: 2px;
+  margin-top: 4px;
   display: inline-block;
   padding: 1px 0;
+  clear: both;
 }
 
 .subtask-completed-date {
   font-size: 10px;
   color: rgba(75, 181, 67, 0.8);
-  margin-top: 2px;
+  margin-top: 4px;
   margin-left: 0;
   display: block;
   padding: 1px 0;
   font-weight: 500;
+  clear: both;
 }
 
 /* App title editing styles */
