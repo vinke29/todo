@@ -34,6 +34,16 @@ const capitalizeFirstLetter = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
+// Update the editingDetails interface to include dueDate
+interface EditingDetails {
+  type: 'task' | 'subtask';
+  id: number;
+  parentId?: number;
+  title: string;
+  notes: string | null;
+  dueDate: Date | null;
+}
+
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -59,13 +69,8 @@ function App() {
   
   // Add state for details drawer
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
-  const [editingDetails, setEditingDetails] = useState<{
-    type: 'task' | 'subtask';
-    todoId: number;
-    subtaskId?: number;
-    title: string;
-    notes: string;
-  } | null>(null);
+  const [editingDetails, setEditingDetails] = useState<EditingDetails | null>(null);
+  const [detailsCalendarOpen, setDetailsCalendarOpen] = useState(false);
   
   // For app title editing
   const [appTitle, setAppTitle] = useState('Your to-dos');
@@ -1371,80 +1376,144 @@ function App() {
     }
   };
 
-  // Open details drawer for a task or subtask
-  const openDetailsDrawer = (type: 'task' | 'subtask', todoId: number, subtaskId?: number) => {
-    // Find the item
+  // Update the openDetailsDrawer function to include dueDate
+  const openDetailsDrawer = (type: 'task' | 'subtask', id: number, parentId?: number) => {
     if (type === 'task') {
-      const task = todos.find(t => t.id === todoId);
-      if (!task) return;
-      
-      setEditingDetails({
-        type: 'task',
-        todoId,
-        title: task.text,
-        notes: task.notes || ''
-      });
-    } else {
-      const task = todos.find(t => t.id === todoId);
-      if (!task) return;
-      
-      const subtask = task.subtasks.find(s => s.id === subtaskId);
-      if (!subtask) return;
-      
-      setEditingDetails({
-        type: 'subtask',
-        todoId,
-        subtaskId,
-        title: subtask.text,
-        notes: subtask.notes || ''
-      });
+      const task = todos.find(todo => todo.id === id);
+      if (task) {
+        setEditingDetails({
+          type,
+          id,
+          title: task.text,
+          notes: task.notes || null,
+          dueDate: task.dueDate
+        });
+        setIsDetailsDrawerOpen(true);
+      }
+    } else if (type === 'subtask') {
+      if (!parentId) return;
+      const task = todos.find(todo => todo.id === parentId);
+      if (task) {
+        const subtask = task.subtasks.find(sub => sub.id === id);
+        if (subtask) {
+          setEditingDetails({
+            type,
+            id,
+            parentId,
+            title: subtask.text,
+            notes: subtask.notes || null,
+            dueDate: subtask.dueDate
+          });
+          setIsDetailsDrawerOpen(true);
+        }
+      }
     }
-    
-    setIsDetailsDrawerOpen(true);
   };
-  
-  // Save details from drawer
+
+  // Update the saveDetailsDrawer function to handle dueDate
   const saveDetailsDrawer = () => {
     if (!editingDetails) return;
-    
+
     if (editingDetails.type === 'task') {
-      // Update the task
-      setTodos(prevTodos => 
-        prevTodos.map(todo => 
-          todo.id === editingDetails.todoId 
-            ? { 
+      // Update task with the same date logic as handleDateSelect
+      setTodos(prevTodos => {
+        const taskToUpdate = prevTodos.find(todo => todo.id === editingDetails.id);
+        if (!taskToUpdate) return prevTodos;
+
+        // Apply the same logic as in handleDateSelect
+        return prevTodos.map(todo => {
+          if (todo.id === editingDetails.id) {
+            // Create new subtasks with adjusted dates if needed
+            const updatedSubtasks = todo.subtasks.map(subtask => {
+              if (editingDetails.dueDate && subtask.dueDate && subtask.dueDate > editingDetails.dueDate) {
+                // Clone the date to avoid reference issues
+                return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
+              }
+              return subtask;
+            });
+            
+            return { 
+              ...todo, 
+              text: editingDetails.title,
+              notes: editingDetails.notes || undefined,
+              dueDate: editingDetails.dueDate,
+              subtasks: updatedSubtasks
+            };
+          }
+          return todo;
+        });
+      });
+    } else if (editingDetails.type === 'subtask' && editingDetails.parentId) {
+      // Update subtask with the same date logic as handleSubtaskDateSelect
+      setTodos(prevTodos => {
+        // Find the parent task
+        const parentTask = prevTodos.find(todo => todo.id === editingDetails.parentId);
+        if (!parentTask) return prevTodos;
+
+        // First update the subtask with the new details
+        let updatedTodos = prevTodos.map(todo => {
+          if (todo.id === editingDetails.parentId) {
+            const updatedSubtasks = todo.subtasks.map(subtask => {
+              if (subtask.id === editingDetails.id) {
+                return { 
+                  ...subtask, 
+                  text: editingDetails.title,
+                  notes: editingDetails.notes || undefined,
+                  dueDate: editingDetails.dueDate
+                };
+              }
+              return subtask;
+            });
+            
+            return {
+              ...todo,
+              subtasks: updatedSubtasks
+            };
+          }
+          return todo;
+        });
+        
+        // Find the updated todo to work with
+        const updatedTodo = updatedTodos.find(todo => todo.id === editingDetails.parentId);
+        if (!updatedTodo) return updatedTodos;
+        
+        // Apply the same date logic as in handleSubtaskDateSelect
+        
+        // If parent has a due date and the new subtask date is later,
+        // update the parent task's due date to match the subtask
+        if (parentTask.dueDate && editingDetails.dueDate && editingDetails.dueDate > parentTask.dueDate) {
+          updatedTodos = updatedTodos.map(todo => {
+            if (todo.id === editingDetails.parentId) {
+              return { 
                 ...todo, 
-                text: editingDetails.title,
-                notes: editingDetails.notes.trim() || undefined
-              } 
-            : todo
-        )
-      );
-    } else {
-      // Update the subtask
-      setTodos(prevTodos => 
-        prevTodos.map(todo => 
-          todo.id === editingDetails.todoId 
-            ? { 
-                ...todo, 
-                subtasks: todo.subtasks.map(subtask => 
-                  subtask.id === editingDetails.subtaskId 
-                    ? {
-                        ...subtask,
-                        text: editingDetails.title,
-                        notes: editingDetails.notes.trim() || undefined
-                      }
-                    : subtask
-                )
-              } 
-            : todo
-        )
-      );
+                dueDate: new Date(editingDetails.dueDate!.getTime()) 
+              };
+            }
+            return todo;
+          });
+        }
+        
+        // If parent has no due date, update it to the latest subtask date
+        if (!parentTask.dueDate) {
+          const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
+          if (latestDate) {
+            updatedTodos = updatedTodos.map(todo => {
+              if (todo.id === editingDetails.parentId) {
+                return { ...todo, dueDate: latestDate };
+              }
+              return todo;
+            });
+          }
+        }
+        
+        return updatedTodos;
+      });
     }
-    
+
+    // Close the drawer
     closeDetailsDrawer();
   };
-  
+
   // Close details drawer
   const closeDetailsDrawer = useCallback(() => {
     setIsDetailsDrawerOpen(false);
@@ -1606,7 +1675,6 @@ function App() {
                           {todo.dueDate && (
                             <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
                           )}
-                          {todo.notes && <span className="task-notes-indicator">📝</span>}
                         </>
                       )}
                     </div>
@@ -1733,7 +1801,7 @@ function App() {
                                       <>
                                         <span 
                                           className="subtask-text"
-                                          onClick={() => openDetailsDrawer('subtask', todo.id, subtask.id)}
+                                          onClick={() => openDetailsDrawer('subtask', subtask.id, todo.id)}
                                           title="Click to edit subtask"
                                         >{subtask.text}</span>
                                         {subtask.dueDate && (
@@ -1742,7 +1810,6 @@ function App() {
                                         {subtask.completedDate && (
                                           <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
                                         )}
-                                        {subtask.notes && <span className="subtask-notes-indicator">📝</span>}
                                       </>
                                     )}
                                   </div>
@@ -2819,6 +2886,131 @@ function App() {
                 placeholder="Add notes here..."
                 rows={6}
               />
+            </div>
+            <div className="details-field">
+              <label htmlFor="details-due-date">Due Date:</label>
+              <div className="details-due-date">
+                {editingDetails.dueDate ? (
+                  <div className="details-date-display">
+                    <span>{formatDate(editingDetails.dueDate)}</span>
+                    <button
+                      className="details-date-clear"
+                      onClick={() => setEditingDetails({
+                        ...editingDetails,
+                        dueDate: null
+                      })}
+                      title="Clear due date"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="details-date-select"
+                    onClick={() => {
+                      setCalendarCurrentDate(new Date());
+                      setDetailsCalendarOpen(true);
+                    }}
+                  >
+                    Set Due Date
+                  </button>
+                )}
+              </div>
+              {detailsCalendarOpen && (
+                <div className="details-calendar">
+                  <div className="calendar-month">
+                    <button
+                      className="month-nav"
+                      onClick={() => {
+                        const newDate = new Date(calendarCurrentDate);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        setCalendarCurrentDate(newDate);
+                      }}
+                    >
+                      &lt;
+                    </button>
+                    <div className="month-label">
+                      {calendarCurrentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </div>
+                    <button
+                      className="month-nav"
+                      onClick={() => {
+                        const newDate = new Date(calendarCurrentDate);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setCalendarCurrentDate(newDate);
+                      }}
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                  <div className="weekday-header">
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+                      <div key={index} className="weekday">{day}</div>
+                    ))}
+                  </div>
+                  <div className="calendar-days">
+                    {(() => {
+                      const year = calendarCurrentDate.getFullYear();
+                      const month = calendarCurrentDate.getMonth();
+                      const firstDayOfMonth = new Date(year, month, 1);
+                      const lastDayOfMonth = new Date(year, month + 1, 0);
+                      
+                      // Calculate days from previous month to show
+                      const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
+                      
+                      // Calculate total days to show
+                      const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
+                      const totalWeeks = Math.ceil(totalDays / 7);
+                      
+                      const days = [];
+                      
+                      // Add empty days for previous month
+                      for (let i = 0; i < firstDayOfWeek; i++) {
+                        days.push(
+                          <div key={`empty-${i}`} className="empty-day"></div>
+                        );
+                      }
+                      
+                      // Add days for current month
+                      for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                        const date = new Date(year, month, i);
+                        const isSelected = editingDetails.dueDate && 
+                          date.getDate() === editingDetails.dueDate.getDate() &&
+                          date.getMonth() === editingDetails.dueDate.getMonth() &&
+                          date.getFullYear() === editingDetails.dueDate.getFullYear();
+                        
+                        days.push(
+                          <button
+                            key={i}
+                            className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                            onClick={() => {
+                              const selectedDate = new Date(year, month, i);
+                              setEditingDetails({
+                                ...editingDetails,
+                                dueDate: selectedDate
+                              });
+                              setDetailsCalendarOpen(false);
+                            }}
+                            type="button"
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      // Add empty days to complete last week row if needed
+                      const remainingDays = 7 * totalWeeks - days.length;
+                      for (let i = 0; i < remainingDays; i++) {
+                        days.push(
+                          <div key={`empty-end-${i}`} className="empty-day"></div>
+                        );
+                      }
+                      
+                      return days;
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="details-buttons">
               <button className="save-details" onClick={saveDetailsDrawer}>Save</button>
