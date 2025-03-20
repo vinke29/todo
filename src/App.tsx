@@ -138,6 +138,11 @@ function App() {
   const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
 
+  // Add state to track current month/year for each calendar
+  const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
+  const [newTaskCalendarDate, setNewTaskCalendarDate] = useState<Date>(new Date());
+  const [subtaskCalendarDate, setSubtaskCalendarDate] = useState<Date>(new Date());
+  
   // Load theme preference from localStorage on initial render
   useEffect(() => {
     const savedTodos = localStorage.getItem('todos');
@@ -686,21 +691,27 @@ function App() {
   // Toggle calendar visibility for a task
   const toggleCalendar = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
+    // If opening calendar for the first time or a different task, reset to current month
+    if (calendarOpenForId !== id) {
+      setCalendarCurrentDate(new Date());
+    }
     setCalendarOpenForId(calendarOpenForId === id ? null : id);
   };
 
   // Toggle calendar visibility for new task with debouncing
   const toggleNewTaskCalendar = (e: React.MouseEvent) => {
-    e.preventDefault();
     e.stopPropagation();
     
-    // Prevent double-clicks by debouncing
+    // Prevent double-clicks
     if (isCalendarClickPendingRef.current) return;
     
     isCalendarClickPendingRef.current = true;
     console.log('Calendar icon clicked'); // Debug log
     
     // Toggle the calendar visibility
+    if (!isNewTaskCalendarOpen) {
+      setNewTaskCalendarDate(new Date()); // Reset to current month when opening
+    }
     setIsNewTaskCalendarOpen(!isNewTaskCalendarOpen);
     
     // Close any task calendars if open
@@ -708,7 +719,6 @@ function App() {
       setCalendarOpenForId(null);
     }
     
-    // Reset the debounce flag after 300ms
     if (calendarClickTimeoutRef.current) {
       clearTimeout(calendarClickTimeoutRef.current);
     }
@@ -1025,16 +1035,17 @@ function App() {
     });
   };
 
-  // Toggle calendar for subtask
+  // Toggle subtask calendar
   const toggleSubtaskCalendar = (e: React.MouseEvent, todoId: number, subtaskId: number) => {
     e.stopPropagation();
     
     // Close if the same subtask calendar is already open
-    if (calendarOpenForSubtask && 
-        calendarOpenForSubtask.todoId === todoId && 
-        calendarOpenForSubtask.subtaskId === subtaskId) {
+    if (calendarOpenForSubtask &&
+       calendarOpenForSubtask.todoId === todoId &&
+       calendarOpenForSubtask.subtaskId === subtaskId) {
       setCalendarOpenForSubtask(null);
     } else {
+      setSubtaskCalendarDate(new Date()); // Reset to current month when opening a different subtask calendar
       setCalendarOpenForSubtask({ todoId, subtaskId });
     }
     
@@ -1042,8 +1053,30 @@ function App() {
     if (calendarOpenForId !== null) {
       setCalendarOpenForId(null);
     }
+    
     if (isNewTaskCalendarOpen) {
       setIsNewTaskCalendarOpen(false);
+    }
+  };
+
+  // Add functions to navigate between months
+  const navigateMonth = (date: Date, direction: 'prev' | 'next'): Date => {
+    const newDate = new Date(date);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    return newDate;
+  };
+
+  const handleCalendarNavigation = (direction: 'prev' | 'next', type: 'task' | 'newTask' | 'subtask') => {
+    if (type === 'task') {
+      setCalendarCurrentDate(navigateMonth(calendarCurrentDate, direction));
+    } else if (type === 'newTask') {
+      setNewTaskCalendarDate(navigateMonth(newTaskCalendarDate, direction));
+    } else {
+      setSubtaskCalendarDate(navigateMonth(subtaskCalendarDate, direction));
     }
   };
 
@@ -1661,9 +1694,29 @@ function App() {
             >
               <div className="calendar-popup">
                 <div className="calendar-header">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCalendarNavigation('prev', 'task');
+                    }}
+                    className="calendar-nav-btn prev-month"
+                    aria-label="Previous month"
+                  >
+                    ◀
+                  </button>
                   <div className="month-title">
-                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {calendarCurrentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCalendarNavigation('next', 'task');
+                    }}
+                    className="calendar-nav-btn next-month"
+                    aria-label="Next month"
+                  >
+                    ▶
+                  </button>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1684,9 +1737,8 @@ function App() {
                   
                   <div className="calendar-days">
                     {(() => {
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = today.getMonth();
+                      const year = calendarCurrentDate.getFullYear();
+                      const month = calendarCurrentDate.getMonth();
                       
                       // Get first day of month and total days
                       const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -1742,9 +1794,29 @@ function App() {
           >
             <div className="calendar-popup">
               <div className="calendar-header">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCalendarNavigation('prev', 'newTask');
+                  }}
+                  className="calendar-nav-btn prev-month"
+                  aria-label="Previous month"
+                >
+                  ◀
+                </button>
                 <div className="month-title">
-                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {newTaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCalendarNavigation('next', 'newTask');
+                  }}
+                  className="calendar-nav-btn next-month"
+                  aria-label="Next month"
+                >
+                  ▶
+                </button>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1765,9 +1837,8 @@ function App() {
                 
                 <div className="calendar-days">
                   {(() => {
-                    const today = new Date();
-                    const year = today.getFullYear();
-                    const month = today.getMonth();
+                    const year = newTaskCalendarDate.getFullYear();
+                    const month = newTaskCalendarDate.getMonth();
                     
                     // Get first day of month and total days
                     const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -1832,9 +1903,31 @@ function App() {
                 >
                   <div className="calendar-popup">
                     <div className="calendar-header">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCalendarNavigation('prev', 'subtask');
+                        }}
+                        className="calendar-nav-btn prev-month"
+                        aria-label="Previous month"
+                        type="button"
+                      >
+                        ◀
+                      </button>
                       <div className="month-title">
-                        {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        {subtaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                       </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCalendarNavigation('next', 'subtask');
+                        }}
+                        className="calendar-nav-btn next-month"
+                        aria-label="Next month"
+                        type="button"
+                      >
+                        ▶
+                      </button>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1856,9 +1949,8 @@ function App() {
                       
                       <div className="calendar-days">
                         {(() => {
-                          const today = new Date();
-                          const year = today.getFullYear();
-                          const month = today.getMonth();
+                          const year = subtaskCalendarDate.getFullYear();
+                          const month = subtaskCalendarDate.getMonth();
                           
                           // Get first day of month and total days
                           const firstDayOfMonth = new Date(year, month, 1).getDay();
