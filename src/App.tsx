@@ -2848,7 +2848,7 @@ function App() {
       
       {/* Details Drawer */}
       {isDetailsDrawerOpen && editingDetails && (
-        <div className="details-drawer">
+        <div className={`details-drawer ${currentTheme}`}>
           <div className="details-drawer-header">
             <h3>{editingDetails.type === 'task' ? 'Task Details' : 'Subtask Details'}</h3>
             <button 

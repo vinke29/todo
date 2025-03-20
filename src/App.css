@@ -2162,40 +2162,241 @@ button:disabled {
 }
 
 /* Mondrian theme styling for details drawer */
+.mondrian.App-header .details-drawer,
 .mondrian .details-drawer {
-  background-color: white;
-  border-left: 3px solid black;
-  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  background-color: white !important;
+  border-left: 5px solid black !important;
+  box-shadow: -5px 0 0 rgba(0, 0, 0, 0.8) !important;
+  color: black !important;
 }
 
+.mondrian.App-header .details-drawer-header,
 .mondrian .details-drawer-header {
-  border-bottom: 3px solid black;
+  border-bottom: 5px solid black !important;
+  background-color: #d42c2c !important; /* Mondrian red */
+  color: white !important;
+  padding: 18px 20px !important;
 }
 
+.mondrian.App-header .details-drawer-header h3,
+.mondrian .details-drawer-header h3 {
+  font-weight: bold !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: white !important;
+}
+
+.mondrian.App-header .details-content,
+.mondrian .details-content {
+  padding: 25px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  background-color: white !important;
+}
+
+.mondrian.App-header .details-field,
+.mondrian .details-field {
+  background-color: white !important;
+  padding: 15px !important;
+  border: 3px solid black !important;
+  margin-bottom: 25px !important;
+}
+
+.mondrian.App-header .details-field:nth-child(2),
+.mondrian .details-field:nth-child(2) {
+  border-color: #225e9a !important; /* Mondrian blue */
+}
+
+.mondrian.App-header .details-field:nth-child(3),
+.mondrian .details-field:nth-child(3) {
+  border-color: #FFD700 !important; /* Mondrian yellow */
+}
+
+.mondrian.App-header .details-field label,
+.mondrian .details-field label {
+  color: black !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  font-size: 0.9rem !important;
+  padding-bottom: 5px !important;
+  border-bottom: 2px solid black !important;
+  display: block !important;
+  margin-bottom: 15px !important;
+}
+
+.mondrian.App-header .details-field input,
+.mondrian.App-header .details-field textarea,
 .mondrian .details-field input,
 .mondrian .details-field textarea {
-  border: 2px solid black;
-  background-color: white;
+  border: 3px solid black !important;
+  background-color: white !important;
+  color: black !important;
+  font-weight: 500 !important;
+  padding: 12px !important;
 }
 
-.mondrian .save-details {
-  background-color: #d42c2c; /* Mondrian red */
-  color: white;
-  border: 2px solid black;
+.mondrian.App-header .details-field textarea,
+.mondrian .details-field textarea {
+  min-height: 150px !important;
 }
 
-.mondrian .save-details:hover {
-  background-color: #b51f1f;
+.mondrian.App-header .details-buttons,
+.mondrian .details-buttons {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  margin-top: 30px !important;
 }
 
+.mondrian.App-header .save-details,
+.mondrian.App-header .cancel-details,
+.mondrian .save-details,
 .mondrian .cancel-details {
-  background-color: #225e9a; /* Mondrian blue */
-  color: white;
-  border: 2px solid black;
+  flex: 1 !important;
+  height: 45px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  border: 3px solid black !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
 }
 
+.mondrian.App-header .save-details,
+.mondrian .save-details {
+  background-color: #d42c2c !important; /* Mondrian red */
+  color: white !important;
+}
+
+.mondrian.App-header .save-details:hover,
+.mondrian .save-details:hover {
+  background-color: #b51f1f !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 5px 0 black !important;
+}
+
+.mondrian.App-header .cancel-details,
+.mondrian .cancel-details {
+  background-color: #225e9a !important; /* Mondrian blue */
+  color: white !important;
+}
+
+.mondrian.App-header .cancel-details:hover,
 .mondrian .cancel-details:hover {
-  background-color: #194574;
+  background-color: #194574 !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 5px 0 black !important;
+}
+
+/* Mondrian theme styles for date elements */
+.mondrian.App-header .details-date-display,
+.mondrian .details-date-display {
+  background-color: white !important;
+  border: 3px solid #FFD700 !important; /* Mondrian yellow */
+  color: black !important;
+  font-weight: 600 !important;
+  padding: 12px 15px !important;
+  border-radius: 0 !important;
+}
+
+.mondrian.App-header .details-date-select,
+.mondrian .details-date-select {
+  background-color: #FFD700 !important; /* Mondrian yellow */
+  color: black !important;
+  border: 3px solid black !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 12px 18px !important;
+  border-radius: 0 !important;
+}
+
+.mondrian.App-header .details-date-select:hover,
+.mondrian .details-date-select:hover {
+  background-color: #e8c400 !important;
+}
+
+.mondrian.App-header .details-date-clear,
+.mondrian .details-date-clear {
+  color: black !important;
+  font-size: 1.4rem !important;
+  margin-left: 12px !important;
+}
+
+.mondrian.App-header .details-calendar,
+.mondrian .details-calendar {
+  border: 3px solid black !important;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8) !important;
+  background-color: white !important;
+  padding: 20px !important;
+  border-radius: 0 !important;
+}
+
+.mondrian .calendar-month {
+  border-bottom: 3px solid black !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 15px !important;
+}
+
+.mondrian .month-label {
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  color: black !important;
+}
+
+.mondrian .month-nav {
+  background-color: #225e9a !important; /* Mondrian blue */
+  color: white !important;
+  border: 2px solid black !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.mondrian .month-nav:hover {
+  background-color: #194574 !important;
+  transform: scale(1.1) !important;
+}
+
+.mondrian .weekday {
+  color: black !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.5px !important;
+}
+
+.mondrian .calendar-day {
+  border: 1px solid black !important;
+  height: 32px !important;
+  font-weight: 500 !important;
+  border-radius: 0 !important;
+}
+
+.mondrian .calendar-day:hover {
+  background-color: #f5f5f5 !important;
+  transform: scale(1.1) !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.mondrian .calendar-day.selected {
+  background-color: #d42c2c !important; /* Mondrian red */
+  color: white !important;
+  border: 2px solid black !important;
+  font-weight: 700 !important;
+}
+
+/* Mondrian theme note indicators */
+.mondrian .task-notes-indicator,
+.mondrian .subtask-notes-indicator {
+  background-color: #FFD700 !important; /* Mondrian yellow */
+  color: black !important;
+  border: 1px solid black !important;
+  padding: 2px 5px !important;
+  border-radius: 3px !important;
+  font-weight: 700 !important;
+  margin-left: 10px !important;
 }
 
 /* Details Due Date styles */
@@ -2281,41 +2482,6 @@ button:disabled {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Mondrian theme styles for details due date */
-.mondrian .details-date-select {
-  background-color: #FFD700;
-  color: black;
-  border: 2px solid black;
-}
-
-.mondrian .details-date-select:hover {
-  background-color: #FFC107;
-}
-
-.mondrian .details-date-display {
-  background-color: white;
-  border: 2px solid black;
-}
-
-.mondrian .details-date-clear {
-  color: #666;
-}
-
-.mondrian .details-date-clear:hover {
-  color: #333;
-}
-
-.mondrian .details-calendar {
-  border: 3px solid black;
-  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.3);
-}
-
-.mondrian .calendar-day.selected {
-  background-color: #d42c2c;
-  border: 2px solid black;
-  color: white;
-}
-
 /* Month navigation in calendars */
 .calendar-month {
   display: flex;
@@ -2380,16 +2546,6 @@ button:disabled {
   background-color: #34495e;
 }
 
-/* Mondrian theme styles for calendar month */
-.mondrian .details-calendar .month-nav {
-  border: 2px solid black;
-  background-color: white;
-}
-
-.mondrian .details-calendar .month-nav:hover {
-  background-color: #f0f0f0;
-}
-
 /* Calendar days in details drawer */
 .details-calendar .calendar-days {
   display: grid;
@@ -2418,7 +2574,7 @@ button:disabled {
 }
 
 .details-calendar .calendar-day.selected {
-  background: #61dafb;
+  background-color: #61dafb;
   color: white;
   font-weight: 500;
 }
@@ -2446,11 +2602,48 @@ button:disabled {
 }
 
 .App-header .details-calendar .calendar-day.selected {
-  background: #61dafb;
+  background-color: #61dafb;
   color: #1a1a1a;
 }
 
 .App-header .details-calendar .weekday {
   color: #bdc3c7;
+}
+
+/* More specific styling for title and notes fields in Mondrian */
+.mondrian .details-field:first-child {
+  background-color: white !important;
+  border: 3px solid #d42c2c !important; /* Red border for title field */
+}
+
+.mondrian.App-header .details-field:first-child label,
+.mondrian .details-field:first-child label {
+  border-bottom: 2px solid #d42c2c !important;
+  color: #d42c2c !important;
+  font-weight: 900 !important;
+}
+
+.mondrian.App-header .details-field:nth-child(2) label,
+.mondrian .details-field:nth-child(2) label {
+  border-bottom: 2px solid #225e9a !important;
+  color: #225e9a !important;
+  font-weight: 900 !important;
+}
+
+.mondrian.App-header .details-field:nth-child(3) label,
+.mondrian .details-field:nth-child(3) label {
+  border-bottom: 2px solid #FFD700 !important;
+  color: #FFD700 !important;
+  font-weight: 900 !important;
+}
+
+/* Fix for the buttons in Mondrian to ensure they appear correctly */
+.mondrian .details-buttons {
+  padding: 10px 0 !important;
+}
+
+/* Fix for the Set Due Date button in Mondrian */
+.mondrian .details-date-select {
+  margin-right: 10px !important;
 }
 

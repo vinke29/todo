@@ -921,4 +921,201 @@
   font-weight: bold;
   font-style: normal;
   text-decoration: underline;
+}
+
+/* Details Drawer for Mondrian theme */
+.mondrian-theme .details-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 350px;
+  background-color: var(--mondrian-white);
+  border-left: 6px solid var(--mondrian-black);
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+  color: var(--mondrian-black);
+}
+
+.mondrian-theme .details-drawer-header {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+  padding: 18px 20px;
+  border-bottom: 5px solid var(--mondrian-black);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mondrian-theme .details-drawer-header h3 {
+  margin: 0;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .close-history-btn {
+  background: transparent;
+  border: 2px solid var(--mondrian-white);
+  color: var(--mondrian-white);
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .close-history-btn:hover {
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-red);
+}
+
+.mondrian-theme .details-content {
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mondrian-theme .details-field {
+  background-color: var(--mondrian-white);
+  padding: 15px;
+  border: 3px solid var(--mondrian-black);
+  margin-bottom: 25px;
+}
+
+.mondrian-theme .details-field:nth-child(2) {
+  border-color: var(--mondrian-blue);
+}
+
+.mondrian-theme .details-field:nth-child(3) {
+  border-color: var(--mondrian-yellow);
+}
+
+.mondrian-theme .details-field label {
+  color: var(--mondrian-black);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+  padding-bottom: 5px;
+  border-bottom: 2px solid var(--mondrian-black);
+  display: block;
+  margin-bottom: 15px;
+}
+
+.mondrian-theme .details-field input,
+.mondrian-theme .details-field textarea {
+  width: 100%;
+  border: 3px solid var(--mondrian-black);
+  background-color: var(--mondrian-white);
+  color: var(--mondrian-black);
+  font-weight: 500;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.mondrian-theme .details-field textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.mondrian-theme .details-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 30px;
+  padding: 0 25px 25px;
+}
+
+.mondrian-theme .save-details {
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+  border: 3px solid var(--mondrian-black);
+  padding: 10px 25px;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--mondrian-transition);
+  flex: 1;
+}
+
+.mondrian-theme .save-details:hover {
+  background-color: #0A4C91;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .cancel-details {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+  border: 3px solid var(--mondrian-black);
+  padding: 10px 25px;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--mondrian-transition);
+  flex: 1;
+}
+
+.mondrian-theme .cancel-details:hover {
+  background-color: #B52522;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .details-due-date {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.mondrian-theme .details-date-select {
+  background-color: var(--mondrian-yellow);
+  color: var(--mondrian-black);
+  border: 3px solid var(--mondrian-black);
+  padding: 8px 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .details-date-select:hover {
+  background-color: #E5C105;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 0 var(--mondrian-black);
+}
+
+.mondrian-theme .details-date-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 3px solid var(--mondrian-black);
+  padding: 8px 15px;
+  background-color: var(--mondrian-light-grey);
+}
+
+.mondrian-theme .details-date-clear {
+  background: transparent;
+  border: 2px solid var(--mondrian-black);
+  color: var(--mondrian-black);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  transition: var(--mondrian-transition);
+}
+
+.mondrian-theme .details-date-clear:hover {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
 } 
