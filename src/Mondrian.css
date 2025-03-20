@@ -859,6 +859,15 @@
   font-weight: bold;
 }
 
+.mondrian-theme .history-task-text:hover,
+.mondrian-theme .history-parent-task-text:hover,
+.mondrian-theme .history-subtask-text:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
 .mondrian-theme .history-due-date {
   color: var(--mondrian-blue);
   font-weight: 500;
@@ -1118,4 +1127,151 @@
 .mondrian-theme .details-date-clear:hover {
   background-color: var(--mondrian-red);
   color: var(--mondrian-white);
+}
+
+/* Mondrian theme for history filters */
+.mondrian-theme .history-filters {
+  margin-bottom: 25px;
+  border-bottom: var(--mondrian-border);
+  padding-bottom: 20px;
+}
+
+.mondrian-theme .filter-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.mondrian-theme .filter-tab {
+  padding: 10px;
+  background-color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: var(--mondrian-transition);
+  text-align: center;
+  color: var(--mondrian-black);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Use different colors for each tab to match Mondrian style */
+.mondrian-theme .filter-tab:nth-child(1) {
+  background-color: var(--mondrian-red);
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .filter-tab:nth-child(2) {
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+}
+
+.mondrian-theme .filter-tab:nth-child(3) {
+  background-color: var(--mondrian-yellow);
+  color: var(--mondrian-black);
+}
+
+.mondrian-theme .filter-tab:hover {
+  transform: translateY(-4px);
+  box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.8);
+}
+
+.mondrian-theme .filter-tab.active {
+  border-width: 3px;
+  transform: translateY(-2px);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.9);
+  font-weight: 700;
+  /* Scale the text slightly for emphasis */
+  font-size: 0.95rem;
+}
+
+.mondrian-theme .custom-date-range {
+  background-color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  padding: 15px;
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mondrian-theme .date-range-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--mondrian-black);
+  font-weight: 500;
+}
+
+.mondrian-theme .edit-date-range-btn {
+  background-color: var(--mondrian-blue);
+  color: var(--mondrian-white);
+  border: 2px solid var(--mondrian-black);
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: var(--mondrian-transition);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.mondrian-theme .edit-date-range-btn:hover {
+  background-color: var(--mondrian-red);
+  transform: translateY(-2px);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.8);
+}
+
+/* Style the productivity stats section to match Mondrian theme */
+.mondrian-theme .productivity-stats {
+  background-color: var(--mondrian-white);
+  border: var(--mondrian-border);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  margin: 25px 0;
+  position: relative;
+}
+
+.mondrian-theme .stats-header {
+  border-bottom: 2px solid var(--mondrian-black);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  color: var(--mondrian-red);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mondrian-theme .stats-message {
+  color: var(--mondrian-black);
+  font-weight: 600;
+  padding: 10px 0;
+}
+
+.mondrian-theme .stats-encouragement {
+  margin-top: 15px;
+  font-style: italic;
+  color: var(--mondrian-blue);
+  font-weight: 500;
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
+}
+
+.mondrian-theme .on-time {
+  color: var(--mondrian-blue);
+  font-weight: 700;
+}
+
+.mondrian-theme .late {
+  color: var(--mondrian-red);
+  font-weight: 700;
 } 
