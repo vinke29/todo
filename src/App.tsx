@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, createRef } from 'react';
+import React, { useState, useRef, useEffect, createRef, useCallback } from 'react';
 import './App.css';
 import './Mondrian.css';
 import './VanGogh.css';
@@ -11,6 +11,7 @@ interface Subtask {
   dueDate: Date | null;
   completedDate: Date | null; // Adding completed date tracking
   hidden?: boolean; // Add this property to control visibility in the UI
+  notes?: string; // Add notes field
 }
 
 interface Todo {
@@ -21,6 +22,7 @@ interface Todo {
   completedDate: Date | null; // Adding completed date tracking
   subtasks: Subtask[];
   isExpanded: boolean; // Track if subtasks are expanded/visible
+  notes?: string; // Add notes field
 }
 
 // Add new theme types
@@ -54,6 +56,16 @@ function App() {
   const [completedTasks, setCompletedTasks] = useState<Todo[]>([]);
   // Add state for side drawer visibility
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  
+  // Add state for details drawer
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
+  const [editingDetails, setEditingDetails] = useState<{
+    type: 'task' | 'subtask';
+    todoId: number;
+    subtaskId?: number;
+    title: string;
+    notes: string;
+  } | null>(null);
   
   // For app title editing
   const [appTitle, setAppTitle] = useState('Your to-dos');
@@ -335,7 +347,8 @@ function App() {
         dueDate: newTaskDueDate,
         completedDate: null,
         subtasks: [],
-        isExpanded: false
+        isExpanded: false,
+        notes: ''
       };
       setTodos([...todos, newTodo]);
       setInputValue('');
@@ -828,7 +841,8 @@ function App() {
       text: capitalizeFirstLetter(newSubtaskText.trim()),
       completed: false,
       dueDate: null,
-      completedDate: null
+      completedDate: null,
+      notes: ''
     };
 
     // First update the todos state with the new subtask
@@ -1182,9 +1196,9 @@ function App() {
   };
 
   // Toggle history drawer
-  const toggleHistoryDrawer = () => {
+  const toggleHistoryDrawer = useCallback(() => {
     setIsHistoryDrawerOpen(!isHistoryDrawerOpen);
-  };
+  }, [isHistoryDrawerOpen]);
   
   // Add a new function to restore a completed task back to active tasks
   const handleRestoreTask = (taskId: number) => {
@@ -1272,24 +1286,40 @@ function App() {
     );
   };
   
-  const handleClickOutside = (e: MouseEvent) => {
+  // Close settings when clicking outside
+  const handleClickOutside = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (isSettingsOpen && !target.closest('.settings-menu') && !target.closest('.settings-icon')) {
+    
+    // Check if click is outside settings menu
+    if (isSettingsOpen && !target.closest('.settings-menu')) {
       setIsSettingsOpen(false);
     }
     
+    // Check if click is outside history drawer
     if (isHistoryDrawerOpen && !target.closest('.history-drawer') && !target.closest('.history-icon')) {
       setIsHistoryDrawerOpen(false);
     }
-  };
+    
+    // Check if click is outside details drawer
+    if (isDetailsDrawerOpen && !target.closest('.details-drawer')) {
+      setIsDetailsDrawerOpen(false); // Just close it directly
+      setEditingDetails(null);
+    }
+  }, [isSettingsOpen, isHistoryDrawerOpen, isDetailsDrawerOpen]);
 
-  // Add event listener for clicks outside settings
   useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
+    // Add event listener if either drawer is open
+    if (isSettingsOpen || isHistoryDrawerOpen || isDetailsDrawerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    
+    // Clean up
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSettingsOpen]);
+  }, [isSettingsOpen, isHistoryDrawerOpen, isDetailsDrawerOpen, handleClickOutside]);
 
   // Get filter date based on selected time filter
   const getFilterDate = (): Date => {
@@ -1340,6 +1370,86 @@ function App() {
       }
     }
   };
+
+  // Open details drawer for a task or subtask
+  const openDetailsDrawer = (type: 'task' | 'subtask', todoId: number, subtaskId?: number) => {
+    // Find the item
+    if (type === 'task') {
+      const task = todos.find(t => t.id === todoId);
+      if (!task) return;
+      
+      setEditingDetails({
+        type: 'task',
+        todoId,
+        title: task.text,
+        notes: task.notes || ''
+      });
+    } else {
+      const task = todos.find(t => t.id === todoId);
+      if (!task) return;
+      
+      const subtask = task.subtasks.find(s => s.id === subtaskId);
+      if (!subtask) return;
+      
+      setEditingDetails({
+        type: 'subtask',
+        todoId,
+        subtaskId,
+        title: subtask.text,
+        notes: subtask.notes || ''
+      });
+    }
+    
+    setIsDetailsDrawerOpen(true);
+  };
+  
+  // Save details from drawer
+  const saveDetailsDrawer = () => {
+    if (!editingDetails) return;
+    
+    if (editingDetails.type === 'task') {
+      // Update the task
+      setTodos(prevTodos => 
+        prevTodos.map(todo => 
+          todo.id === editingDetails.todoId 
+            ? { 
+                ...todo, 
+                text: editingDetails.title,
+                notes: editingDetails.notes.trim() || undefined
+              } 
+            : todo
+        )
+      );
+    } else {
+      // Update the subtask
+      setTodos(prevTodos => 
+        prevTodos.map(todo => 
+          todo.id === editingDetails.todoId 
+            ? { 
+                ...todo, 
+                subtasks: todo.subtasks.map(subtask => 
+                  subtask.id === editingDetails.subtaskId 
+                    ? {
+                        ...subtask,
+                        text: editingDetails.title,
+                        notes: editingDetails.notes.trim() || undefined
+                      }
+                    : subtask
+                )
+              } 
+            : todo
+        )
+      );
+    }
+    
+    closeDetailsDrawer();
+  };
+  
+  // Close details drawer
+  const closeDetailsDrawer = useCallback(() => {
+    setIsDetailsDrawerOpen(false);
+    setEditingDetails(null);
+  }, []);
 
   return (
     <div className={`App ${currentTheme === 'surprise' ? 'surprise-theme' : ''}`}>
@@ -1490,12 +1600,13 @@ function App() {
                         <>
                           <span 
                             className="todo-text"
-                            onClick={() => handleEditStart(todo.id, todo.text)}
-                            title="Click to edit"
+                            onClick={() => openDetailsDrawer('task', todo.id)}
+                            title="Click to edit task"
                           >{todo.text}</span>
                           {todo.dueDate && (
                             <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
                           )}
+                          {todo.notes && <span className="task-notes-indicator">📝</span>}
                         </>
                       )}
                     </div>
@@ -1622,8 +1733,8 @@ function App() {
                                       <>
                                         <span 
                                           className="subtask-text"
-                                          onClick={() => handleEditSubtaskStart(todo.id, subtask.id, subtask.text)}
-                                          title="Click to edit"
+                                          onClick={() => openDetailsDrawer('subtask', todo.id, subtask.id)}
+                                          title="Click to edit subtask"
                                         >{subtask.text}</span>
                                         {subtask.dueDate && (
                                           <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
@@ -1631,6 +1742,7 @@ function App() {
                                         {subtask.completedDate && (
                                           <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
                                         )}
+                                        {subtask.notes && <span className="subtask-notes-indicator">📝</span>}
                                       </>
                                     )}
                                   </div>
@@ -2663,6 +2775,55 @@ function App() {
               
               return null;
             })()}
+          </div>
+        </div>
+      )}
+      
+      {/* Details Drawer */}
+      {isDetailsDrawerOpen && editingDetails && (
+        <div className="details-drawer">
+          <div className="details-drawer-header">
+            <h3>{editingDetails.type === 'task' ? 'Task Details' : 'Subtask Details'}</h3>
+            <button 
+              className="close-history-btn"
+              onClick={closeDetailsDrawer}
+              title="Close details"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="details-content">
+            <div className="details-field">
+              <label htmlFor="details-title">Title:</label>
+              <input
+                id="details-title"
+                type="text"
+                value={editingDetails.title}
+                onChange={(e) => setEditingDetails({
+                  ...editingDetails,
+                  title: e.target.value
+                })}
+                placeholder="Enter title"
+              />
+            </div>
+            <div className="details-field">
+              <label htmlFor="details-notes">Notes:</label>
+              <textarea
+                id="details-notes"
+                value={editingDetails.notes || ''}
+                onChange={(e) => setEditingDetails({
+                  ...editingDetails,
+                  notes: e.target.value
+                })}
+                placeholder="Add notes here..."
+                rows={6}
+              />
+            </div>
+            <div className="details-buttons">
+              <button className="save-details" onClick={saveDetailsDrawer}>Save</button>
+              <button className="cancel-details" onClick={closeDetailsDrawer}>Cancel</button>
+            </div>
           </div>
         </div>
       )}

@@ -1927,3 +1927,143 @@ button:disabled {
   color: #b32821;
 }
 
+/* Details Drawer (for task and subtask editing) */
+.details-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  background-color: #f8f9fa;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.App-header .details-drawer {
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.details-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.App-header .details-drawer-header {
+  border-bottom: 1px solid #34495e;
+}
+
+.details-drawer-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.details-content {
+  padding: 20px;
+}
+
+.details-field {
+  margin-bottom: 20px;
+}
+
+.details-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.details-field input,
+.details-field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
+  color: #333;
+}
+
+.App-header .details-field input,
+.App-header .details-field textarea {
+  background-color: #34495e;
+  border: 1px solid #445566;
+  color: #ecf0f1;
+}
+
+.details-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.details-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.details-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.save-details {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.save-details:hover {
+  background-color: #27ae60;
+}
+
+.cancel-details {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.cancel-details:hover {
+  background-color: #d0d0d0;
+}
+
+.App-header .cancel-details {
+  background-color: #34495e;
+  color: #ecf0f1;
+}
+
+.App-header .cancel-details:hover {
+  background-color: #2c3e50;
+}
+
+/* Notes indicator for tasks and subtasks */
+.task-notes-indicator,
+.subtask-notes-indicator {
+  margin-left: 6px;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  opacity: 0.8;
+}
+
+.App-header .task-notes-indicator,
+.App-header .subtask-notes-indicator {
+  color: #bdc3c7;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
