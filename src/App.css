@@ -2766,9 +2766,37 @@ li.swipe-open > .subtasks-container {
     touch-action: pan-y;
   }
   
+  /* Improve alignment of todo items on mobile */
+  .todo-main-row {
+    justify-content: space-between;
+    padding-right: 0; /* Remove any potential right padding */
+  }
+  
+  .todo-controls {
+    margin-left: auto; /* Push controls to the right */
+    min-width: unset; /* Remove minimum width */
+    padding-right: 0; /* No right padding */
+  }
+  
+  .add-subtask-btn {
+    margin-right: 0; /* Ensure no right margin */
+  }
+  
+  .todo-actions {
+    margin-right: 0; /* Remove right margin */
+  }
+  
+  /* Make sure the todo-item doesn't push the controls too far */
+  .todo-item {
+    max-width: 70%; /* Slightly reduced to give more space for controls */
+    padding-right: 8px; /* Less padding to the right */
+  }
+  
   .todo-controls,
   .subtask-actions {
-    min-width: 80px; /* Ensure there's space for other buttons */
+    min-width: auto; /* Calculate width based on content */
+    display: flex;
+    justify-content: flex-end; /* Align content to the right */
   }
   
   /* Make parent task cover the full height when expanded */
