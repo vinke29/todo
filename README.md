@@ -51,4 +51,7 @@ This is a basic implementation. You can extend it by:
 
 ## License
 
-This project is licensed under the MIT License.
+© 2025 Ignacio Vinke. All rights reserved.
+
+This code is proprietary and confidential. Unauthorized copying, modification,
+distribution, or use of this software, via any medium, is strictly prohibited.
