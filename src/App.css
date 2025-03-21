@@ -2684,3 +2684,85 @@ button:disabled {
   transform: scale(1.1);
 }
 
+/* Add styles for mobile swipe functionality */
+.swipeable-item {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.swipe-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e74c3c;
+  color: white;
+  width: 0;
+  opacity: 0;
+  font-weight: bold;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  z-index: 5; /* Ensure it stays above content */
+}
+
+/* For tasks with expanded subtasks */
+.swipe-action.includes-subtasks {
+  height: 100%; /* Ensure it covers the entire height */
+  bottom: 0;    /* Extend to the bottom */
+}
+
+.swipe-action.show {
+  width: 75px;
+  opacity: 1;
+}
+
+.swipe-action-text {
+  padding: 0 15px;
+  white-space: nowrap;
+}
+
+/* When a task is expanded and has subtasks */
+li.swipe-open > .subtasks-container {
+  position: relative;
+  z-index: 1; /* Keep below the delete action */
+}
+
+/* Make sure subtasks have their own swipe area independent of parent */
+.subtasks-list .swipeable-item {
+  overflow: hidden; /* Contain child swipe actions */
+  position: relative;
+  z-index: 2; /* Higher than parent list but lower than its own swipe action */
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .delete-btn,
+  .delete-subtask-btn {
+    display: none;
+  }
+  
+  .swipeable-item {
+    touch-action: pan-y;
+  }
+  
+  .todo-controls,
+  .subtask-actions {
+    min-width: 80px; /* Ensure there's space for other buttons */
+  }
+  
+  /* Make parent task cover the full height when expanded */
+  .todo-list > .swipeable-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Ensure the swipe action expands to cover subtasks */
+  .todo-list > .swipeable-item.swipe-open .swipe-action.includes-subtasks {
+    height: 100%; /* Cover the full height */
+  }
+}
+

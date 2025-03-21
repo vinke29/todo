@@ -1,8 +1,15 @@
 import React, { useState, useRef, useEffect, createRef, useCallback } from 'react';
+import { useSwipeable, SwipeableProps } from 'react-swipeable';
 import './App.css';
 import './Mondrian.css';
 import './VanGogh.css';
 import './LeCorbusier.css';
+
+// Utility function to detect mobile devices
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         (window.innerWidth <= 768);
+};
 
 interface Subtask {
   id: number;
@@ -43,6 +50,124 @@ interface EditingDetails {
   notes: string | null;
   dueDate: Date | null;
 }
+
+// SwipeableTask component
+const SwipeableTask = ({ 
+  todo, 
+  children, 
+  onDelete,
+  className,
+  ...props
+}: {
+  todo: Todo, 
+  children: React.ReactNode, 
+  onDelete: (id: number) => void,
+  className?: string,
+  [key: string]: any
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => setIsOpen(true),
+    onSwipedRight: () => setIsOpen(false),
+    delta: 50,
+    preventScrollOnSwipe: true,
+    trackMouse: false
+  });
+
+  return (
+    <li
+      className={`${className || ''} ${isMobile() ? 'swipeable-item' : ''} ${isOpen ? 'swipe-open' : ''}`}
+      {...props}
+      {...(isMobile() ? swipeHandlers : {})}
+    >
+      {children}
+      
+      {/* Swipe delete action */}
+      {isMobile() && (
+        <div 
+          className={`swipe-action ${isOpen ? 'show' : ''} ${todo.isExpanded ? 'includes-subtasks' : ''}`}
+          onClick={() => {
+            setIsOpen(false);
+            onDelete(todo.id);
+          }}
+        >
+          <span className="swipe-action-text">Delete</span>
+        </div>
+      )}
+    </li>
+  );
+};
+
+// SwipeableSubtask component
+const SwipeableSubtask = ({ 
+  todoId,
+  subtask, 
+  children, 
+  onDelete,
+  className,
+  ...props
+}: {
+  todoId: number,
+  subtask: Subtask, 
+  children: React.ReactNode, 
+  onDelete: (todoId: number, subtaskId: number) => void,
+  className?: string,
+  [key: string]: any
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: (e) => {
+      // Stop propagation to prevent parent handling
+      e.event.stopPropagation();
+      setIsOpen(true);
+    },
+    onSwipedRight: (e) => {
+      // Stop propagation to prevent parent handling
+      e.event.stopPropagation();
+      setIsOpen(false);
+    },
+    delta: 50,
+    preventScrollOnSwipe: true,
+    trackMouse: false
+  });
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    // Prevent event bubbling to parent components
+    e.stopPropagation();
+    setIsOpen(false);
+    onDelete(todoId, subtask.id);
+  };
+
+  return (
+    <li
+      className={`${className || ''} ${isMobile() ? 'swipeable-item' : ''} ${isOpen ? 'swipe-open' : ''}`}
+      {...props}
+      // Apply swipe handlers only for mobile, and add a click handler to stop propagation
+      {...(isMobile() ? {
+        ...swipeHandlers,
+        onClick: (e: React.MouseEvent) => {
+          // Stop clicks from reaching parent swipeable items
+          e.stopPropagation();
+          if (props.onClick) props.onClick(e);
+        }
+      } : {})}
+    >
+      {children}
+      
+      {/* Swipe delete action */}
+      {isMobile() && (
+        <div 
+          className={`swipe-action ${isOpen ? 'show' : ''}`}
+          onClick={handleDeleteClick}
+        >
+          <span className="swipe-action-text">Delete</span>
+        </div>
+      )}
+    </li>
+  );
+};
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -122,6 +247,33 @@ function App() {
   // Add state for Coming Soon modal
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [comingSoonTheme, setComingSoonTheme] = useState('');
+  
+  // State variables for swipe-to-delete functionality
+  const [swipedTaskId, setSwipedTaskId] = useState<number | null>(null);
+  const [swipedSubtaskInfo, setSwipedSubtaskInfo] = useState<{todoId: number, subtaskId: number} | null>(null);
+  
+  // Function to reset all swipe states
+  const resetSwipeStates = useCallback(() => {
+    setSwipedTaskId(null);
+    setSwipedSubtaskInfo(null);
+  }, []);
+  
+  // Add click listener to reset swipe states when clicking outside
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      // Check if the click was outside a swipeable item
+      const target = e.target as Element;
+      if (!target.closest('.swipeable-item') && !target.closest('.swipe-action')) {
+        resetSwipeStates();
+      }
+    };
+    
+    document.addEventListener('click', handleDocumentClick);
+    
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [resetSwipeStates]);
   
   // Function to sort tasks by due date
   const sortByDueDate = (tasksToSort: Todo[] | Subtask[]): (Todo[] | Subtask[]) => {
@@ -1761,17 +1913,19 @@ function App() {
           <ul ref={todoListRef} className="todo-list">
             {/* Use the preview todos for rendering during drag operations */}
             {previewTodos.map((todo) => (
-              <li
+              <SwipeableTask
                 key={todo.id}
                 data-id={todo.id}
                 className={`${todo.completed ? 'completed' : ''} ${draggedTaskId === todo.id ? 'dragging' : ''} ${dragOverTaskId === todo.id ? 'drag-over' : ''}`}
                 draggable={true}
-                onDragStart={(e) => handleDragStart(e, todo.id)}
+                onDragStart={(e: React.DragEvent<HTMLLIElement>) => handleDragStart(e, todo.id)}
                 onDragEnd={handleDragEnd}
-                onDragOver={(e) => handleDragOver(e, todo.id)}
-                onDragEnter={(e) => handleDragOver(e, todo.id)}
+                onDragOver={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
+                onDragEnter={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
                 onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, todo.id)}
+                onDrop={(e: React.DragEvent<HTMLLIElement>) => handleDrop(e, todo.id)}
+                todo={todo}
+                onDelete={handleDeleteTodo}
               >
                 <div className="todo-main-row">
                   <div className="todo-item">
@@ -1902,9 +2056,12 @@ function App() {
                             return !subtask.hidden;
                           })
                           .map((subtask: Subtask) => (
-                            <li
+                            <SwipeableSubtask
                               key={subtask.id}
                               className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
+                              todoId={todo.id}
+                              subtask={subtask}
+                              onDelete={handleDeleteSubtask}
                             >
                               <div className="subtask-main-row">
                                 <div className="subtask-content">
@@ -1969,13 +2126,13 @@ function App() {
                                   </div>
                                 )}
                               </div>
-                            </li>
+                            </SwipeableSubtask>
                           ))}
                       </ul>
                     )}
                   </div>
                 )}
-              </li>
+              </SwipeableTask>
             ))}
           </ul>
           
