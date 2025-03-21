@@ -1200,9 +1200,17 @@ function App() {
         // Recalculate the latest due date from remaining subtasks
         const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
         
-        // Update the parent task's due date
+        // Check if this was the last subtask
+        const noSubtasksRemain = updatedTodo.subtasks.length === 0;
+        
+        // Update the parent task's due date and collapse if no subtasks remain
         return updatedTodos.map(todo => 
-          todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
+          todo.id === todoId ? { 
+            ...todo, 
+            dueDate: latestDate,
+            // If no subtasks remain, collapse the panel
+            isExpanded: noSubtasksRemain ? false : todo.isExpanded
+          } : todo
         );
       }
       
@@ -2010,7 +2018,8 @@ function App() {
                   </div>
                 </div>
                 
-                {(todo.isExpanded || addingSubtaskForId === todo.id) && (
+                {/* Only show subtasks container if there are subtasks or we're adding one */}
+                {((todo.isExpanded && todo.subtasks.length > 0) || addingSubtaskForId === todo.id) && (
                   <div className="subtasks-container">
                     {addingSubtaskForId === todo.id && (
                       <div className="new-subtask-input-container">
