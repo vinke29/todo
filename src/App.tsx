@@ -1803,7 +1803,7 @@ function App() {
                           <span 
                             className="todo-text"
                             onClick={() => openDetailsDrawer('task', todo.id)}
-                            title="Click to edit task"
+                            title="Click to edit task details and set due date"
                           >{todo.text}</span>
                           {todo.dueDate && (
                             <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
@@ -1935,7 +1935,7 @@ function App() {
                                         <span 
                                           className="subtask-text"
                                           onClick={() => openDetailsDrawer('subtask', subtask.id, todo.id)}
-                                          title="Click to edit subtask"
+                                          title="Click to edit subtask details and set due date"
                                         >{subtask.text}</span>
                                         {subtask.dueDate && (
                                           <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>

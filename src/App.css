@@ -182,7 +182,7 @@
 .todo-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px; /* Reduced gap since we have fewer controls now */
 }
 
 .todo-item {
@@ -190,8 +190,7 @@
   align-items: center;
   flex-grow: 1;
   padding-right: 15px;
-  max-width: 60%;
-  min-height: 32px; /* Changed from height to min-height for flexibility */
+  max-width: 75%; /* Increased from 60% since we have fewer controls */
 }
 
 .todo-actions {
@@ -236,32 +235,35 @@
   margin: 0 0 4px 0; /* Added bottom margin to create space for dates */
 }
 
-.todo-text {
-  word-break: break-word;
-  overflow-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
+.todo-text,
+.subtask-text {
   position: relative;
   transition: color 0.2s ease, transform 0.1s ease;
-  padding: 0 4px;
-  border-radius: 3px;
-  display: inline-block;
-  min-height: 24px;
-  line-height: 24px;
-  vertical-align: middle;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background-color: rgba(97, 218, 251, 0.05);
+  border: 1px solid transparent;
 }
 
-.todo-text:hover {
+.todo-text:hover,
+.subtask-text:hover {
   color: #61dafb;
   background-color: rgba(97, 218, 251, 0.1);
+  border: 1px dashed rgba(97, 218, 251, 0.3);
+  transform: translateY(-1px);
 }
 
-.todo-text:hover::after {
+.todo-text:hover::after,
+.subtask-text:hover::after {
   content: "✎";
   font-size: 0.8em;
   margin-left: 5px;
   opacity: 0.7;
+}
+
+.todo-text:active,
+.subtask-text:active {
+  transform: translateY(1px);
 }
 
 .delete-btn {
@@ -413,12 +415,11 @@
 .subtask-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px; /* Only need space for the delete button now */
   flex-shrink: 0;
 }
 
 .edit-subtask-btn,
-.subtask-calendar-icon,
 .delete-subtask-btn {
   background: none;
   border: none;
@@ -436,31 +437,9 @@
 }
 
 .edit-subtask-btn:hover,
-.subtask-calendar-icon:hover {
+.delete-subtask-btn:hover {
   color: #61dafb;
   background-color: rgba(97, 218, 251, 0.1);
-  transform: scale(1.1);
-}
-
-.delete-subtask-btn {
-  color: rgba(231, 76, 60, 0.7);
-  background: none;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 3px;
-  transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
-.delete-subtask-btn:hover {
-  color: #e74c3c;
-  background-color: rgba(231, 76, 60, 0.1);
   transform: scale(1.1);
 }
 
@@ -2649,5 +2628,59 @@ button:disabled {
 /* Fix for the Set Due Date button in Mondrian */
 .mondrian .details-date-select {
   margin-right: 10px !important;
+}
+
+/* Hide calendar icons */
+.calendar-icon-wrapper,
+.calendar-icon,
+.new-task-calendar-icon,
+.subtask-calendar-icon {
+  display: none !important;
+}
+
+/* Also adjust the layout to accommodate the removal of the icons */
+.todo-controls {
+  gap: 4px; /* Reduced gap since we have fewer controls now */
+}
+
+.subtask-actions {
+  min-width: 28px; /* Only need space for the delete button now */
+}
+
+/* Update the todo text container to use more space */
+.todo-text-container {
+  flex-grow: 1;
+  max-width: 75%; /* Increased from 60% since we have fewer controls */
+}
+
+/* Ensure the details drawer calendar remains visible */
+.details-calendar .month-nav,
+.details-calendar button,
+.details-drawer .calendar-day {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.delete-subtask-btn {
+  color: rgba(231, 76, 60, 0.7);
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.delete-subtask-btn:hover {
+  color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.1);
+  transform: scale(1.1);
 }
 
