@@ -1111,6 +1111,23 @@ button:disabled {
   padding: 0.5rem;
   border-radius: 10px;
   background: transparent;
+  position: relative; /* For positioning the Coming Soon badge */
+}
+
+/* Style for Coming Soon badge */
+.coming-soon-badge {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  background-color: rgba(236, 93, 93, 0.85);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 0;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .theme-option:hover {
@@ -2763,6 +2780,72 @@ li.swipe-open > .subtasks-container {
   /* Ensure the swipe action expands to cover subtasks */
   .todo-list > .swipeable-item.swipe-open .swipe-action.includes-subtasks {
     height: 100%; /* Cover the full height */
+  }
+  
+  /* Optimize settings menu for mobile */
+  .settings-menu {
+    width: 94% !important;
+    min-width: unset !important;
+    max-width: 350px !important;
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    border-radius: 10px;
+    padding: 1rem 0.5rem 1.5rem 0.5rem;
+  }
+  
+  .theme-section {
+    padding: 0 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Make theme options display better on mobile */
+  .theme-options {
+    grid-template-columns: repeat(2, 1fr); /* Two columns on mobile */
+    gap: 0.75rem;
+  }
+  
+  .theme-option {
+    padding: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .theme-preview {
+    height: 60px; /* Smaller preview on mobile */
+    margin-bottom: 0.4rem;
+  }
+  
+  .theme-option span {
+    font-size: 0.75rem;
+    margin-bottom: 20px; /* Make room for the Coming Soon badge */
+    display: block;
+    white-space: nowrap;
+  }
+  
+  .coming-soon-badge {
+    font-size: 0.65rem;
+    padding: 1px 0;
+    bottom: 2px;
+    position: absolute;
+    width: 100%;
+  }
+  
+  /* Ensure consistent height for theme options to prevent layout shifts */
+  .theme-option {
+    height: 110px;
+    position: relative;
+  }
+  
+  /* Add scroll to settings content if needed */
+  .settings-content {
+    max-height: 80vh;
+    overflow-y: auto;
+    padding-bottom: 10px;
+  }
+  
+  /* Ensure the Mondrian theme preview renders correctly on mobile */
+  .mondrian-preview .preview-block.red {
+    grid-row: span 2;
   }
 }
 
