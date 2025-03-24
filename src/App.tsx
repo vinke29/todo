@@ -1,36 +1,19 @@
-import React, { useState, useRef, useEffect, createRef, useCallback } from 'react';
-import { useSwipeable, SwipeableProps } from 'react-swipeable';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
 import './Mondrian.css';
 import './VanGogh.css';
 import './LeCorbusier.css';
+import { auth, onAuthStateChanged, signOut } from './firebase';
+import Login from './components/Login';
+import { AuthProvider } from './contexts/AuthContext';
+import { Todo, Subtask } from './types';
+import { getTodos, getCompletedTodos, addTodo, updateTodo, deleteTodo, moveTodoToCompleted, restoreTodo } from './firestore';
 
 // Utility function to detect mobile devices
 const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
          (window.innerWidth <= 768);
 };
-
-interface Subtask {
-  id: number;
-  text: string;
-  completed: boolean;
-  dueDate: Date | null;
-  completedDate: Date | null; // Adding completed date tracking
-  hidden?: boolean; // Add this property to control visibility in the UI
-  notes?: string; // Add notes field
-}
-
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-  dueDate: Date | null;
-  completedDate: Date | null; // Adding completed date tracking
-  subtasks: Subtask[];
-  isExpanded: boolean; // Track if subtasks are expanded/visible
-  notes?: string; // Add notes field
-}
 
 // Add new theme types
 type ThemeType = 'default' | 'mondrian' | 'vangogh' | 'lecorbusier' | 'surprise';
@@ -41,7 +24,6 @@ const capitalizeFirstLetter = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-// Update the editingDetails interface to include dueDate
 interface EditingDetails {
   type: 'task' | 'subtask';
   id: number;
@@ -66,20 +48,46 @@ const SwipeableTask = ({
   [key: string]: any
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => setIsOpen(true),
-    onSwipedRight: () => setIsOpen(false),
-    delta: 50,
-    preventScrollOnSwipe: true,
-    trackMouse: false
-  });
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      setIsOpen(true);
+    } else if (isRightSwipe) {
+      setIsOpen(false);
+    }
+  };
+
+  const touchHandlers = isMobile() ? {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  } : {};
 
   return (
     <li
       className={`${className || ''} ${isMobile() ? 'swipeable-item' : ''} ${isOpen ? 'swipe-open' : ''}`}
       {...props}
-      {...(isMobile() ? swipeHandlers : {})}
+      {...touchHandlers}
     >
       {children}
       
@@ -116,22 +124,43 @@ const SwipeableSubtask = ({
   [key: string]: any
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: (e) => {
-      // Stop propagation to prevent parent handling
-      e.event.stopPropagation();
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
       setIsOpen(true);
-    },
-    onSwipedRight: (e) => {
-      // Stop propagation to prevent parent handling
-      e.event.stopPropagation();
+    } else if (isRightSwipe) {
       setIsOpen(false);
-    },
-    delta: 50,
-    preventScrollOnSwipe: true,
-    trackMouse: false
-  });
+    }
+  };
+
+  const touchHandlers = isMobile() ? {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  } : {};
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     // Prevent event bubbling to parent components
@@ -146,7 +175,7 @@ const SwipeableSubtask = ({
       {...props}
       // Apply swipe handlers only for mobile, and add a click handler to stop propagation
       {...(isMobile() ? {
-        ...swipeHandlers,
+        ...touchHandlers,
         onClick: (e: React.MouseEvent) => {
           // Stop clicks from reaching parent swipeable items
           e.stopPropagation();
@@ -170,40 +199,60 @@ const SwipeableSubtask = ({
 };
 
 function App() {
+  // State for todos and input
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState('');
+  
+  // Authentication state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null);
   const [isDropEndZone, setIsDropEndZone] = useState(false);
-  // Add state for sorting tasks by due date
-  const [sortTasksByDueDate, setSortTasksByDueDate] = useState(false);
-  // IMPORTANT: This is the list we'll show during dragging - a visual preview
   const [previewTodos, setPreviewTodos] = useState<Todo[]>([]);
-  // Add state for tracking which task is being edited
+  
+  // Task editing state
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
-  const endDropZoneRef = useRef<HTMLDivElement>(null);
-  const todoListRef = useRef<HTMLUListElement>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
+  const [sortTasksByDueDate, setSortTasksByDueDate] = useState(false);
   
-  // Add state for completed tasks history
-  const [completedTasks, setCompletedTasks] = useState<Todo[]>([]);
-  // Add state for side drawer visibility
+  // Subtask state
+  const [editingSubtaskId, setEditingSubtaskId] = useState<{todoId: number, subtaskId: number} | null>(null);
+  const [subtaskText, setSubtaskText] = useState('');
+  const [addingSubtaskForId, setAddingSubtaskForId] = useState<number | null>(null);
+  const [newSubtaskText, setNewSubtaskText] = useState('');
+  
+  // Calendar state
+  const [calendarOpenForTaskId, setCalendarOpenForTaskId] = useState<number | null>(null);
+  const [subtaskCalendarOpen, setSubtaskCalendarOpen] = useState<{todoId: number, subtaskId: number} | null>(null);
+  const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [newTaskCalendarDate, setNewTaskCalendarDate] = useState(new Date());
+  const [subtaskCalendarDate, setSubtaskCalendarDate] = useState(new Date());
+  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
+  
+  // App title state
+  const [appTitle, setAppTitle] = useState('Your to-dos');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isTitleHovered, setIsTitleHovered] = useState(false);
+  
+  // UI state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
-  
-  // Add state for details drawer
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [editingDetails, setEditingDetails] = useState<EditingDetails | null>(null);
   const [detailsCalendarOpen, setDetailsCalendarOpen] = useState(false);
   
-  // For app title editing
-  const [appTitle, setAppTitle] = useState('Your to-dos');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isTitleHovered, setIsTitleHovered] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  // Theme state
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>('mondrian');
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [comingSoonTheme, setComingSoonTheme] = useState('');
   
-  // For history drawer filtering
+  // Date filters for history
   const [historyTimeFilter, setHistoryTimeFilter] = useState<'7days' | '30days' | 'custom'>('7days');
   const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({
     start: null,
@@ -211,16 +260,17 @@ function App() {
   });
   const [isCustomDatePickerOpen, setIsCustomDatePickerOpen] = useState(false);
   
-  // For subtasks
-  const [editingSubtaskId, setEditingSubtaskId] = useState<{todoId: number, subtaskId: number} | null>(null);
-  const [subtaskText, setSubtaskText] = useState('');
-  const [addingSubtaskForId, setAddingSubtaskForId] = useState<number | null>(null);
-  const [newSubtaskText, setNewSubtaskText] = useState('');
-  const newSubtaskInputRef = useRef<HTMLInputElement>(null);
+  // Refs
+  const endDropZoneRef = useRef<HTMLDivElement>(null);
+  const todoListRef = useRef<HTMLUListElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const editSubtaskInputRef = useRef<HTMLInputElement>(null);
-
-  // Store mouse position data to enhance drop detection
-  const mousePositionRef = useRef({ x: 0, y: 0 });
+  const newSubtaskInputRef = useRef<HTMLInputElement>(null);
+  
+  // Add state for tracking which task has an open calendar
+  const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
+  const [calendarOpenForSubtask, setCalendarOpenForSubtask] = useState<{todoId: number, subtaskId: number} | null>(null);
   
   // Track if we're in an active drop operation to reduce flickering
   const isActiveDropTargetRef = useRef(false);
@@ -228,9 +278,6 @@ function App() {
   // Debounce clicks on the calendar
   const calendarClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCalendarClickPendingRef = useRef(false);
-  
-  // Replace isMondrianTheme with currentTheme
-  const [currentTheme, setCurrentTheme] = useState<ThemeType>('mondrian');
   
   // For surprise theme colors
   const [surpriseColors, setSurpriseColors] = useState({
@@ -241,17 +288,452 @@ function App() {
     text: '#333333'
   });
   
-  // For settings menu
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  // Add state for Coming Soon modal
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
-  const [comingSoonTheme, setComingSoonTheme] = useState('');
-  
   // State variables for swipe-to-delete functionality
   const [swipedTaskId, setSwipedTaskId] = useState<number | null>(null);
   const [swipedSubtaskInfo, setSwipedSubtaskInfo] = useState<{todoId: number, subtaskId: number} | null>(null);
   
+  // Utility function to get the latest date from a list of subtasks
+  const getLatestSubtaskDate = (subtasks: Subtask[]): Date | null => {
+    if (!subtasks || subtasks.length === 0) return null;
+    
+    let latestDate: Date | null = null;
+    
+    subtasks.forEach(subtask => {
+      if (subtask.dueDate) {
+        if (!latestDate || subtask.dueDate > latestDate) {
+          latestDate = new Date(subtask.dueDate.getTime());
+        }
+      }
+    });
+    
+    return latestDate;
+  };
+
+  // Title editing functions
+  const handleTitleEditStart = () => {
+    setIsEditingTitle(true);
+    // Focus the title input after the state update
+    setTimeout(() => {
+      if (titleInputRef.current) {
+        titleInputRef.current.focus();
+      }
+    }, 0);
+  };
+  
+  const handleTitleEditSave = () => {
+    // Save the new title (state is already updated through the input)
+    setIsEditingTitle(false);
+  };
+  
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleEditSave();
+    } else if (e.key === 'Escape') {
+      handleTitleEditCancel();
+    }
+  };
+  
+  const handleTitleEditCancel = () => {
+    // Reset to the previous title (before editing)
+    setAppTitle(appTitle);
+    setIsEditingTitle(false);
+  };
+
+  // Utility function to format dates
+  const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  // Calendar functions
+  const toggleNewTaskCalendar = () => {
+    setIsNewTaskCalendarOpen(!isNewTaskCalendarOpen);
+  };
+
+  // Task editing functions
+  const handleEditSave = () => {
+    if (editingTaskId === null) return;
+    
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === editingTaskId 
+          ? {...todo, text: editText} 
+          : todo
+      )
+    );
+    
+    setEditingTaskId(null);
+    setEditText('');
+  };
+  
+  const handleEditCancel = () => {
+    setEditingTaskId(null);
+    setEditText('');
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent<HTMLLIElement>, id: number) => {
+    setDraggedTaskId(id);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
+    setIsDragging(false);
+    setIsDropEndZone(false);
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLElement>, id?: number) => {
+    e.preventDefault();
+    
+    if (id !== undefined) {
+      setDragOverTaskId(id);
+      setIsDropEndZone(false);
+    } else {
+      setIsDropEndZone(true);
+      setDragOverTaskId(null);
+    }
+    
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleDragLeave = () => {
+    setDragOverTaskId(null);
+    setIsDropEndZone(false);
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLElement>, dropTargetId?: number) => {
+    e.preventDefault();
+    
+    if (draggedTaskId === null) return;
+    
+    // Add to end of list
+    if (dropTargetId === undefined) {
+      const draggedTodo = todos.find(todo => todo.id === draggedTaskId);
+      if (!draggedTodo) return;
+      
+      setTodos(prevTodos => {
+        const filteredTodos = prevTodos.filter(todo => todo.id !== draggedTaskId);
+        return [...filteredTodos, draggedTodo];
+      });
+      
+      handleDragEnd();
+      return;
+    }
+    
+    // If dropping onto itself, do nothing
+    if (draggedTaskId === dropTargetId) {
+      handleDragEnd();
+      return;
+    }
+    
+    setTodos(prevTodos => {
+      const draggedTodo = prevTodos.find(todo => todo.id === draggedTaskId);
+      if (!draggedTodo) return prevTodos;
+      
+      const newTodos = prevTodos.filter(todo => todo.id !== draggedTaskId);
+      
+      // Find the index of the drop target
+      const dropIndex = newTodos.findIndex(todo => todo.id === dropTargetId);
+      
+      // Insert the dragged todo at the new position
+      newTodos.splice(dropIndex, 0, draggedTodo);
+      
+      return newTodos;
+    });
+    
+    handleDragEnd();
+  };
+
+  // Calendar toggling for tasks
+  const toggleCalendar = (e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation();
+    
+    if (calendarOpenForTaskId === taskId) {
+      setCalendarOpenForTaskId(null);
+    } else {
+      setCalendarOpenForTaskId(taskId);
+      setSubtaskCalendarOpen(null);
+      setIsNewTaskCalendarOpen(false);
+    }
+  };
+  
+  // Toggle task expansion (showing/hiding subtasks)
+  const toggleTaskExpansion = (taskId: number) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === taskId 
+          ? {...todo, isExpanded: !todo.isExpanded} 
+          : todo
+      )
+    );
+  };
+
+  // Subtask handling functions
+  const handleAddSubtask = (todoId: number) => {
+    setAddingSubtaskForId(todoId);
+    setNewSubtaskText('');
+    // Focus the input after the state update
+    setTimeout(() => {
+      if (newSubtaskInputRef.current) {
+        newSubtaskInputRef.current.focus();
+      }
+    }, 0);
+  };
+  
+  const handleSaveNewSubtask = (todoId: number) => {
+    if (!newSubtaskText.trim()) return;
+    
+    // Find the maximum subtask ID to create a new unique ID
+    let maxSubtaskId = 0;
+    todos.forEach(todo => {
+      todo.subtasks.forEach(subtask => {
+        maxSubtaskId = Math.max(maxSubtaskId, subtask.id);
+      });
+    });
+    
+    const newSubtask: Subtask = {
+      id: maxSubtaskId + 1,
+      text: newSubtaskText,
+      completed: false,
+      dueDate: null,
+      completedDate: null
+    };
+    
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === todoId) {
+          return {
+            ...todo,
+            isExpanded: true, // Auto-expand to show the new subtask
+            subtasks: [...todo.subtasks, newSubtask]
+          };
+        }
+        return todo;
+      })
+    );
+    
+    setAddingSubtaskForId(null);
+    setNewSubtaskText('');
+  };
+  
+  const handleCancelAddSubtask = () => {
+    setAddingSubtaskForId(null);
+    setNewSubtaskText('');
+  };
+  
+  const handleDeleteSubtask = (todoId: number, subtaskId: number) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === todoId) {
+          return {
+            ...todo,
+            subtasks: todo.subtasks.filter(subtask => subtask.id !== subtaskId)
+          };
+        }
+        return todo;
+      })
+    );
+  };
+  
+  const handleToggleSubtask = (todoId: number, subtaskId: number) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === todoId) {
+          return {
+            ...todo,
+            subtasks: todo.subtasks.map(subtask => {
+              if (subtask.id === subtaskId) {
+                return {
+                  ...subtask,
+                  completed: !subtask.completed,
+                  completedDate: !subtask.completed ? new Date() : null
+                };
+              }
+              return subtask;
+            })
+          };
+        }
+        return todo;
+      })
+    );
+  };
+  
+  const handleEditSubtaskSave = () => {
+    if (!editingSubtaskId) return;
+    
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === editingSubtaskId.todoId) {
+          return {
+            ...todo,
+            subtasks: todo.subtasks.map(subtask => {
+              if (subtask.id === editingSubtaskId.subtaskId) {
+                return {
+                  ...subtask,
+                  text: subtaskText
+                };
+              }
+              return subtask;
+            })
+          };
+        }
+        return todo;
+      })
+    );
+    
+    setEditingSubtaskId(null);
+    setSubtaskText('');
+  };
+  
+  const handleEditSubtaskCancel = () => {
+    setEditingSubtaskId(null);
+    setSubtaskText('');
+  };
+
+  // More calendar-related functions
+  const toggleSubtaskCalendar = (e: React.MouseEvent, todoId: number, subtaskId: number) => {
+    e.stopPropagation();
+    
+    if (subtaskCalendarOpen && 
+        subtaskCalendarOpen.todoId === todoId && 
+        subtaskCalendarOpen.subtaskId === subtaskId) {
+      setSubtaskCalendarOpen(null);
+    } else {
+      setSubtaskCalendarOpen({ todoId, subtaskId });
+      setCalendarOpenForTaskId(null);
+      setIsNewTaskCalendarOpen(false);
+    }
+  };
+  
+  const handleCalendarNavigation = (direction: 'prev' | 'next', calendarType: 'task' | 'newTask' | 'subtask') => {
+    const updateDate = (date: Date): Date => {
+      const newDate = new Date(date);
+      if (direction === 'prev') {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      return newDate;
+    };
+    
+    switch (calendarType) {
+      case 'task':
+        setCalendarDate(updateDate(calendarDate));
+        break;
+      case 'newTask':
+        setNewTaskCalendarDate(updateDate(newTaskCalendarDate));
+        break;
+      case 'subtask':
+        setSubtaskCalendarDate(updateDate(subtaskCalendarDate));
+        break;
+    }
+  };
+  
+  const handleDateSelect = (taskId: number, date: Date) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => {
+        if (todo.id === taskId) {
+          return {
+            ...todo,
+            dueDate: date
+          };
+        }
+        return todo;
+      })
+    );
+    
+    setCalendarOpenForTaskId(null);
+  };
+  
+  const handleNewTaskDateSelect = (date: Date) => {
+    setNewTaskDueDate(date);
+    setIsNewTaskCalendarOpen(false);
+  };
+  
+  const handleSubtaskDateSelect = (todoId: number, subtaskId: number, date: Date) => {
+    setTodos(prevTodos => {
+      // First update the subtask date
+      const updatedTodos = prevTodos.map(todo => {
+        if (todo.id === todoId) {
+          return {
+            ...todo,
+            subtasks: todo.subtasks.map(subtask => {
+              if (subtask.id === subtaskId) {
+                return { ...subtask, dueDate: date };
+              }
+              return subtask;
+            })
+          };
+        }
+        return todo;
+      });
+      
+      // Now find the updated todo to check its due date
+      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
+      if (!updatedTodo) return updatedTodos;
+      
+      // If the subtask's due date is later than the todo's due date, update the todo's due date
+      if (!updatedTodo.dueDate || (updatedTodo.dueDate && date > updatedTodo.dueDate)) {
+        return updatedTodos.map(todo => {
+          if (todo.id === todoId) {
+            return { 
+              ...todo, 
+              dueDate: new Date(date.getTime())  // Clone the date
+            };
+          }
+          return todo;
+        });
+      }
+      
+      return updatedTodos;
+    });
+    
+    setSubtaskCalendarOpen(null);
+  };
+
+  // Toggle settings and history drawer
+  const toggleSettings = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+    if (isHistoryDrawerOpen) {
+      setIsHistoryDrawerOpen(false);
+    }
+  };
+  
+  const toggleHistoryDrawer = () => {
+    setIsHistoryDrawerOpen(!isHistoryDrawerOpen);
+    if (isSettingsOpen) {
+      setIsSettingsOpen(false);
+    }
+  };
+  
+  // Function to determine completion status (on time or late)
+  const getCompletionStatus = (completedDate: Date, dueDate: Date) => {
+    if (!completedDate || !dueDate) {
+      return { status: '', label: '' };
+    }
+    
+    // Remove time component for comparison
+    const completedDay = new Date(completedDate);
+    completedDay.setHours(0, 0, 0, 0);
+    
+    const dueDay = new Date(dueDate);
+    dueDay.setHours(0, 0, 0, 0);
+    
+    if (completedDay <= dueDay) {
+      return { status: 'on-time', label: 'Completed on time' };
+    } else {
+      return { status: 'late', label: 'Completed late' };
+    }
+  };
+
   // Function to reset all swipe states
   const resetSwipeStates = useCallback(() => {
     setSwipedTaskId(null);
@@ -301,21 +783,6 @@ function App() {
     return filtered;
   })();
   
-  // Add state for tracking which task has an open calendar
-  const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
-  
-  // Add state for tracking which subtask has an open calendar
-  const [calendarOpenForSubtask, setCalendarOpenForSubtask] = useState<{todoId: number, subtaskId: number} | null>(null);
-  
-  // Add state for the new task calendar and its selected date
-  const [isNewTaskCalendarOpen, setIsNewTaskCalendarOpen] = useState(false);
-  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
-
-  // Add state to track current month/year for each calendar
-  const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
-  const [newTaskCalendarDate, setNewTaskCalendarDate] = useState<Date>(new Date());
-  const [subtaskCalendarDate, setSubtaskCalendarDate] = useState<Date>(new Date());
-  
   // Load theme preference from localStorage on initial render
   useEffect(() => {
     const savedTodos = localStorage.getItem('todos');
@@ -332,6 +799,8 @@ function App() {
       if (savedTheme === 'surprise') {
         generateSurpriseTheme();
       }
+    } else {
+      setCurrentTheme('mondrian'); // Set Mondrian as default if no theme is saved
     }
     
     if (savedTodos) {
@@ -499,881 +968,101 @@ function App() {
     setPreviewTodos(result);
   };
 
-  const handleAddTodo = () => {
-    if (inputValue.trim() !== '') {
-      const newTodo: Todo = {
-        id: Date.now(),
-        text: capitalizeFirstLetter(inputValue.trim()),
-        completed: false,
-        dueDate: newTaskDueDate,
-        completedDate: null,
-        subtasks: [],
-        isExpanded: false,
-        notes: ''
-      };
-      setTodos([...todos, newTodo]);
-      setInputValue('');
-      // Reset the new task due date after adding
-      setNewTaskDueDate(null);
-    }
-  };
-
-  const handleToggleTodo = (id: number) => {
-    // Find the task that's being completed
-    const taskToComplete = todos.find(todo => todo.id === id);
+  const handleAddTodo = async () => {
+    if (inputValue.trim() === '') return;
     
-    if (taskToComplete) {
-      // Mark task and all its subtasks as completed and set the completedDate
-      const now = new Date();
-      const completedTask = {
-        ...taskToComplete,
-        completed: true,
-        completedDate: now,
-        // Also mark all subtasks as completed
-        subtasks: taskToComplete.subtasks.map(subtask => ({
-          ...subtask,
-          completed: true,
-          completedDate: subtask.completedDate || now // Keep original completion date if it exists
-        }))
-      };
-      
-      // Add to completed tasks history
-      setCompletedTasks(prevCompletedTasks => [completedTask, ...prevCompletedTasks]);
-      
-      // Update the todos list to mark it as completed (for animation)
-      setTodos(
-        todos.map(todo => 
-          todo.id === id ? completedTask : todo
-        )
-      );
-      
-      // Remove the completed task after 800ms (longer for better animation)
-      setTimeout(() => {
-        setTodos(todos.filter(todo => todo.id !== id));
-      }, 800);
+    const newTodo: Todo = {
+      id: Math.max(0, ...todos.map(todo => todo.id)) + 1,
+      text: inputValue,
+      completed: false,
+      dueDate: newTaskDueDate,
+      completedDate: null,
+      subtasks: [],
+      isExpanded: false,
+      notes: ''
+    };
+    
+    setTodos(prevTodos => [...prevTodos, newTodo]);
+    setInputValue('');
+    setNewTaskDueDate(null);
+    
+    // Save to Firestore
+    if (currentUser) {
+      const firestoreId = await addTodo(currentUser.uid, newTodo);
+      if (firestoreId) {
+        // Update the local todo with the Firestore ID
+        setTodos(prevTodos => 
+          prevTodos.map(todo => 
+            todo.id === newTodo.id ? { ...todo, firestoreId } : todo
+          )
+        );
+      }
     }
   };
 
-  const handleDeleteTodo = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const handleToggleTodo = async (id: number) => {
+    const todoToToggle = todos.find(todo => todo.id === id);
+    
+    if (!todoToToggle) return;
+    
+    if (!todoToToggle.completed) {
+      // Mark as completed
+      const updatedTodo = {
+        ...todoToToggle,
+        completed: true,
+        completedDate: new Date()
+      };
+      
+      // Remove from active todos and add to completed
+      setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+      setCompletedTasks(prevCompletedTasks => [updatedTodo, ...prevCompletedTasks]);
+      
+      // Update in Firestore
+      if (currentUser && todoToToggle.firestoreId) {
+        await moveTodoToCompleted(currentUser.uid, updatedTodo);
+      }
+    } else {
+      // This case is likely not needed but included for consistency
+      const updatedTodo = {
+        ...todoToToggle,
+        completed: false,
+        completedDate: null
+      };
+      
+      setTodos(prevTodos => prevTodos.map(todo => 
+        todo.id === id ? updatedTodo : todo
+      ));
+      
+      // Update in Firestore
+      if (currentUser && todoToToggle.firestoreId) {
+        await updateTodo(currentUser.uid, updatedTodo);
+      }
+    }
+  };
+
+  const handleDeleteTodo = async (id: number) => {
+    const todoToDelete = todos.find(todo => todo.id === id);
+    
+    if (!todoToDelete) return;
+    
+    setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+    
+    // Delete from Firestore
+    if (currentUser && todoToDelete.firestoreId) {
+      await deleteTodo(currentUser.uid, todoToDelete.firestoreId);
+    }
   };
   
   // New handlers for editing tasks
   const handleEditStart = (id: number, text: string) => {
     setEditingTaskId(id);
     setEditText(text);
-  };
-  
-  const handleEditCancel = () => {
-    setEditingTaskId(null);
-    setEditText('');
-  };
-  
-  const handleEditSave = () => {
-    if (editingTaskId === null) return;
-    
-    const trimmedText = editText.trim();
-    if (trimmedText === '') {
-      // If the edited text is empty, just cancel editing
-      handleEditCancel();
-      return;
-    }
-    
-    // Update the todo with the new text - now with capitalization
-    setTodos(
-      todos.map(todo => 
-        todo.id === editingTaskId ? { ...todo, text: capitalizeFirstLetter(trimmedText) } : todo
-      )
-    );
-    
-    // Exit edit mode
-    setEditingTaskId(null);
-    setEditText('');
-  };
-  
-  // Enhanced findDropTarget - makes DnD more forgiving by using pointer coordinates
-  const findDropTarget = (clientX: number, clientY: number) => {
-    if (!todoListRef.current) return null;
-    
-    // Get all todo items
-    const todoItems = Array.from(todoListRef.current.querySelectorAll('li')) as HTMLLIElement[];
-    
-    if (todoItems.length === 0) return null;
-    
-    // Check if we're in the end drop zone area - with an expanded hit area
-    if (endDropZoneRef.current) {
-      const endRect = endDropZoneRef.current.getBoundingClientRect();
-      // Create a larger virtual hit area (expand upward by 20px)
-      const expandedEndRect = {
-        top: endRect.top - 20,
-        bottom: endRect.bottom + 20,
-        left: endRect.left,
-        right: endRect.right
-      };
-      
-      // If we're in the expanded end zone area
-      if (clientY >= expandedEndRect.top && clientY <= expandedEndRect.bottom &&
-          clientX >= expandedEndRect.left && clientX <= expandedEndRect.right) {
-        return { id: null, isEndZone: true };
-      }
-    }
-    
-    // Find the most appropriate todo item based on Y position 
-    for (let i = 0; i < todoItems.length; i++) {
-      const item = todoItems[i];
-      const itemId = Number(item.getAttribute('data-id'));
-      const rect = item.getBoundingClientRect();
-      
-      // Don't target the item being dragged
-      if (itemId === draggedTaskId) {
-        continue;
-      }
-      
-      // If cursor is in the upper half of the item, target this item
-      if (clientY < rect.top + rect.height / 2 && clientY >= rect.top - 15) {
-        return { id: itemId, isEndZone: false, position: 'before' };
-      }
-      
-      // If cursor is in the lower half of the item, target after this item
-      if (clientY >= rect.top + rect.height / 2 && clientY <= rect.bottom + 15) {
-        // If this is the last item and we're in the lower half, use end zone instead
-        if (i === todoItems.length - 1) {
-          return { id: null, isEndZone: true };
-        }
-        
-        // Otherwise target the next item
-        const nextItem = todoItems[i + 1];
-        if (nextItem) {
-          const nextItemId = Number(nextItem.getAttribute('data-id'));
-          return { id: nextItemId, isEndZone: false, position: 'before' };
-        }
-      }
-    }
-    
-    // If we're below all items, target the end zone
-    const lastItem = todoItems[todoItems.length - 1];
-    if (lastItem && clientY > lastItem.getBoundingClientRect().bottom) {
-      return { id: null, isEndZone: true };
-    }
-    
-    return null;
-  };
+  }; // End handleEditStart function properly
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent<HTMLLIElement>, id: number) => {
-    // Don't allow dragging if we're in edit mode
-    if (editingTaskId !== null) {
-      e.preventDefault();
-      return;
-    }
-    
-    setDraggedTaskId(id);
-    setIsDragging(true);
-    
-    // Store the initial mouse position
-    mousePositionRef.current = { x: e.clientX, y: e.clientY };
-    
-    // Make the drag image more transparent
-    if (e.dataTransfer.setDragImage) {
-      const draggedElement = e.currentTarget.cloneNode(true) as HTMLElement;
-      draggedElement.style.transform = 'translateY(-1000px)';
-      draggedElement.style.opacity = '0.3';
-      document.body.appendChild(draggedElement);
-      e.dataTransfer.setDragImage(draggedElement, 20, 20);
-      
-      // Clean up the clone after drag operation
-      setTimeout(() => {
-        document.body.removeChild(draggedElement);
-      }, 0);
-    }
-    
-    // Set effectAllowed to move to show the move cursor
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLLIElement | HTMLDivElement>, id?: number) => {
-    e.preventDefault();
-    
-    // Don't allow drag over if we're in edit mode
-    if (editingTaskId !== null) return;
-    
-    // Update current mouse position
-    mousePositionRef.current = { x: e.clientX, y: e.clientY };
-    
-    // Set dropEffect to move
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Find the most appropriate drop target based on mouse position
-    const dropTarget = findDropTarget(e.clientX, e.clientY);
-    
-    if (!dropTarget) return;
-    
-    // Update the drag-over state
-    if (dropTarget.isEndZone) {
-      setIsDropEndZone(true);
-      setDragOverTaskId(null);
-    } else if (dropTarget.id !== null) {
-      setIsDropEndZone(false);
-      setDragOverTaskId(dropTarget.id);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLLIElement | HTMLDivElement>) => {
-    // Only reset if we're actually leaving the drop area completely
-    const relatedTarget = e.relatedTarget as HTMLElement;
-    
-    // Don't reset if still within the element or its children
-    if (e.currentTarget.contains(relatedTarget)) {
-      return;
-    }
-    
-    // If leaving the list area entirely, reset active drop target flag
-    if (!todoListRef.current?.contains(relatedTarget)) {
-      isActiveDropTargetRef.current = false;
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLLIElement | HTMLDivElement>, targetId?: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Don't allow drop if we're in edit mode
-    if (editingTaskId !== null || draggedTaskId === null) return;
-    
-    // First, filter out completed todos so we keep them
-    const completedTodos = todos.filter(todo => todo.completed);
-    
-    // Use the preview todos as the new active todos
-    // This ensures the drop order matches exactly what the user sees
-    const newTodos = [...previewTodos, ...completedTodos];
-    
-    // Update todos with the new order
-    setTodos(newTodos);
-    
-    // Reset drag states
-    resetDragState();
-  };
-
-  const handleDragEnd = () => {
-    resetDragState();
-  };
-  
-  const resetDragState = () => {
-    // Reset all drag states
-    setDraggedTaskId(null);
-    setDragOverTaskId(null);
-    setIsDragging(false);
-    setIsDropEndZone(false);
-    isActiveDropTargetRef.current = false;
-  };
-
-  // Handle keyboard events in edit mode
-  const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleEditSave();
-    } else if (e.key === 'Escape') {
-      handleEditCancel();
-    }
-  };
-
-  // Format date for display
-  const formatDate = (date: Date | null): string => {
-    if (!date) return '';
-    
-    // Ensure date is actually a Date object
-    let dateObj: Date;
-    try {
-      dateObj = date instanceof Date ? date : new Date(date);
-      
-      // Check if date is valid
-      if (isNaN(dateObj.getTime())) {
-        console.warn('Invalid date value:', date);
-        return 'Invalid date';
-      }
-      
-      return dateObj.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: dateObj.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-      });
-    } catch (e) {
-      console.error('Error formatting date:', date, e);
-      return 'Invalid date';
-    }
-  };
-  
-  // Determine if a task was completed on time or late
-  const getCompletionStatus = (completedDate: Date | null, dueDate: Date | null): { status: 'on-time' | 'late' | null, label: string } => {
-    if (!completedDate || !dueDate) {
-      return { status: null, label: '' };
-    }
-    
-    try {
-      // Ensure dates are actually Date objects
-      const completedObj = completedDate instanceof Date ? completedDate : new Date(completedDate);
-      const dueObj = dueDate instanceof Date ? dueDate : new Date(dueDate);
-      
-      // Check if dates are valid
-      if (isNaN(completedObj.getTime()) || isNaN(dueObj.getTime())) {
-        console.warn('Invalid date in completion status check:', { completedDate, dueDate });
-        return { status: null, label: '' };
-      }
-      
-      // Reset hours to compare just the dates
-      const completedDay = new Date(completedObj);
-      completedDay.setHours(0, 0, 0, 0);
-      
-      const dueDay = new Date(dueObj);
-      dueDay.setHours(0, 0, 0, 0);
-      
-      if (completedDay <= dueDay) {
-        return { status: 'on-time', label: 'On time' };
-      } else {
-        return { status: 'late', label: 'Late' };
-      }
-    } catch (e) {
-      console.error('Error checking completion status:', { completedDate, dueDate }, e);
-      return { status: null, label: '' };
-    }
-  };
-  
-  // Handle date selection for a task
-  const handleDateSelect = (id: number, date: Date) => {
-    setTodos(
-      todos.map(todo => {
-        if (todo.id === id) {
-          // For the updated task, check all subtasks
-          const updatedSubtasks = todo.subtasks.map(subtask => {
-            // If subtask has a due date that is later than the new task due date,
-            // update it to match the task's due date
-            if (subtask.dueDate && subtask.dueDate > date) {
-              return { ...subtask, dueDate: new Date(date) };
-            }
-            return subtask;
-          });
-          
-          return { ...todo, dueDate: date, subtasks: updatedSubtasks };
-        }
-        return todo;
-      })
-    );
-    
-    // Close the calendar
-    setCalendarOpenForId(null);
-  };
-  
-  // Toggle calendar visibility for a task
-  const toggleCalendar = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    // If opening calendar for the first time or a different task, reset to current month
-    if (calendarOpenForId !== id) {
-      setCalendarCurrentDate(new Date());
-    }
-    setCalendarOpenForId(calendarOpenForId === id ? null : id);
-  };
-
-  // Toggle calendar visibility for new task with debouncing
-  const toggleNewTaskCalendar = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    // Prevent double-clicks
-    if (isCalendarClickPendingRef.current) return;
-    
-    isCalendarClickPendingRef.current = true;
-    console.log('Calendar icon clicked'); // Debug log
-    
-    // Toggle the calendar visibility
-    if (!isNewTaskCalendarOpen) {
-      setNewTaskCalendarDate(new Date()); // Reset to current month when opening
-    }
-    setIsNewTaskCalendarOpen(!isNewTaskCalendarOpen);
-    
-    // Close any task calendars if open
-    if (calendarOpenForId !== null) {
-      setCalendarOpenForId(null);
-    }
-    
-    if (calendarClickTimeoutRef.current) {
-      clearTimeout(calendarClickTimeoutRef.current);
-    }
-    
-    calendarClickTimeoutRef.current = setTimeout(() => {
-      isCalendarClickPendingRef.current = false;
-    }, 300);
-  };
-  
-  // Handle date selection for new task
-  const handleNewTaskDateSelect = (date: Date) => {
-    setNewTaskDueDate(date);
-    setIsNewTaskCalendarOpen(false);
-  };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (calendarClickTimeoutRef.current) {
-        clearTimeout(calendarClickTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Toggle task expansion (show/hide subtasks)
-  const toggleTaskExpansion = (id: number) => {
-    setTodos(
-      todos.map(todo => 
-        todo.id === id ? { ...todo, isExpanded: !todo.isExpanded } : todo
-      )
-    );
-  };
-
-  // Add subtask to a todo
-  const handleAddSubtask = (todoId: number) => {
-    setAddingSubtaskForId(todoId);
-    setNewSubtaskText('');
-  };
-
-  // Add a new helper function to find the latest date in subtasks
-  const getLatestSubtaskDate = (subtasks: Subtask[]): Date | null => {
-    if (subtasks.length === 0) return null;
-    
-    let latestDate: Date | null = null;
-    
-    subtasks.forEach(subtask => {
-      if (subtask.dueDate) {
-        if (!latestDate || subtask.dueDate > latestDate) {
-          latestDate = subtask.dueDate;
-        }
-      }
-    });
-    
-    return latestDate;
-  };
-
-  // Add a function to update the parent task date if needed
-  const updateParentTaskDate = (todoId: number, subtasks: Subtask[]): void => {
-    setTodos(prevTodos => {
-      const todo = prevTodos.find(t => t.id === todoId);
-      if (!todo) return prevTodos;
-      
-      // If parent task has no due date, set it to the latest subtask date
-      if (!todo.dueDate) {
-        const latestSubtaskDate = getLatestSubtaskDate(subtasks);
-        if (!latestSubtaskDate) return prevTodos;
-        
-        return prevTodos.map(t => 
-          t.id === todoId ? { ...t, dueDate: latestSubtaskDate } : t
-        );
-      } 
-      // If parent task has a due date, update subtasks with later dates to match parent
-      else {
-        const parentDueDate = todo.dueDate; // Store in variable to avoid null error
-        const updatedSubtasks = subtasks.map(subtask => {
-          if (subtask.dueDate && parentDueDate && subtask.dueDate > parentDueDate) {
-            return { ...subtask, dueDate: new Date(parentDueDate) };
-          }
-          return subtask;
-        });
-        
-        // Check if any subtasks were updated
-        const someSubtasksUpdated = updatedSubtasks.some((subtask, index) => 
-          subtask.dueDate !== subtasks[index].dueDate
-        );
-        
-        if (someSubtasksUpdated) {
-          return prevTodos.map(t => 
-            t.id === todoId ? { ...t, subtasks: updatedSubtasks } : t
-          );
-        }
-      }
-      
-      return prevTodos;
-    });
-  };
-
-  // Update handleSaveNewSubtask to check dates
-  const handleSaveNewSubtask = (todoId: number) => {
-    if (newSubtaskText.trim() === '') {
-      setAddingSubtaskForId(null);
-      return;
-    }
-
-    const newSubtask: Subtask = {
-      id: Date.now(),
-      text: capitalizeFirstLetter(newSubtaskText.trim()),
-      completed: false,
-      dueDate: null,
-      completedDate: null,
-      notes: ''
-    };
-
-    // First update the todos state with the new subtask
-    setTodos(prevTodos => {
-      const updatedTodos = prevTodos.map(todo => 
-        todo.id === todoId 
-          ? { ...todo, subtasks: [...todo.subtasks, newSubtask], isExpanded: true } 
-          : todo
-      );
-      
-      // Find the updated todo to check dates
-      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
-      if (updatedTodo) {
-        // This will be called after the state update
-        setTimeout(() => updateParentTaskDate(todoId, updatedTodo.subtasks), 0);
-      }
-      
-      return updatedTodos;
-    });
-
-    setAddingSubtaskForId(null);
-    setNewSubtaskText('');
-  };
-
-  // Cancel adding subtask
-  const handleCancelAddSubtask = () => {
-    setAddingSubtaskForId(null);
-    setNewSubtaskText('');
-  };
-
-  // Edit a subtask
-  const handleEditSubtaskStart = (todoId: number, subtaskId: number, text: string) => {
-    setEditingSubtaskId({ todoId, subtaskId });
-    setSubtaskText(text);
-  };
-
-  // Cancel subtask editing
-  const handleEditSubtaskCancel = () => {
-    setEditingSubtaskId(null);
-    setSubtaskText('');
-  };
-
-  // Save subtask edit
-  const handleEditSubtaskSave = () => {
-    if (!editingSubtaskId) return;
-    
-    const { todoId, subtaskId } = editingSubtaskId;
-    const trimmedText = subtaskText.trim();
-    
-    if (trimmedText === '') {
-      handleEditSubtaskCancel();
-      return;
-    }
-
-    setTodos(
-      todos.map(todo => 
-        todo.id === todoId 
-          ? {
-              ...todo,
-              subtasks: todo.subtasks.map(subtask => 
-                subtask.id === subtaskId 
-                  ? { ...subtask, text: capitalizeFirstLetter(trimmedText) } 
-                  : subtask
-              )
-            } 
-          : todo
-      )
-    );
-
-    setEditingSubtaskId(null);
-    setSubtaskText('');
-  };
-
-  // Toggle subtask completion
-  const handleToggleSubtask = (todoId: number, subtaskId: number) => {
-    const todoToUpdate = todos.find(todo => todo.id === todoId);
-    if (!todoToUpdate) return;
-    
-    // Get the subtask being toggled
-    const subtaskToToggle = todoToUpdate.subtasks.find(subtask => subtask.id === subtaskId);
-    if (!subtaskToToggle) return;
-    
-    // Check if this is completing or uncompleting the subtask
-    const isCompleting = !subtaskToToggle.completed;
-    const now = new Date();
-    
-    // Create the updated subtask with new completion status
-    const updatedSubtask = {
-      ...subtaskToToggle,
-      completed: isCompleting,
-      completedDate: isCompleting ? now : null,
-      // Add a hidden property to control visibility in the main UI
-      hidden: false
-    };
-    
-    // Update the todo with the modified subtask
-    const updatedTodo = {
-      ...todoToUpdate,
-      subtasks: todoToUpdate.subtasks.map(subtask => 
-        subtask.id === subtaskId ? updatedSubtask : subtask
-      )
-    };
-    
-    // Check if all subtasks will be completed after this change
-    const willAllSubtasksBeCompleted = updatedTodo.subtasks.length > 0 && 
-      updatedTodo.subtasks.every(subtask => subtask.id === subtaskId ? isCompleting : subtask.completed);
-    
-    // If completing the subtask and all other subtasks are already complete, mark the parent task as complete
-    if (isCompleting && willAllSubtasksBeCompleted) {
-      // Mark the parent task as complete
-      const completedParentTask = {
-        ...updatedTodo,
-        completed: true,
-        completedDate: now
-      };
-      
-      // Add to completed tasks history
-      setCompletedTasks(prevCompletedTasks => [completedParentTask, ...prevCompletedTasks]);
-      
-      // Update the todos list to mark it as completed (for animation)
-      setTodos(
-        todos.map(todo => 
-          todo.id === todoId ? completedParentTask : todo
-        )
-      );
-      
-      // Remove the completed task after animation
-      setTimeout(() => {
-        setTodos(todos.filter(todo => todo.id !== todoId));
-      }, 800);
-    } else if (isCompleting) {
-      // Just completing a subtask, not the whole task
-      
-      // First update todos to reflect the completed subtask
-      setTodos(
-        todos.map(todo => 
-          todo.id === todoId 
-            ? updatedTodo
-            : todo
-        )
-      );
-      
-      // Instead of removing the subtask, mark it as hidden after animation
-      setTimeout(() => {
-        setTodos(prevTodos => 
-          prevTodos.map(todo => 
-            todo.id === todoId 
-              ? {
-                  ...todo,
-                  subtasks: todo.subtasks.map(subtask => 
-                    subtask.id === subtaskId
-                      ? { ...subtask, hidden: true }
-                      : subtask
-                  )
-                }
-              : todo
-          )
-        );
-      }, 800);
-    } else {
-      // Just uncompleting a subtask - also make it visible again if it was hidden
-      setTodos(
-        todos.map(todo => 
-          todo.id === todoId 
-            ? {
-                ...todo,
-                subtasks: todo.subtasks.map(subtask => 
-                  subtask.id === subtaskId
-                    ? { ...updatedSubtask, hidden: false }
-                    : subtask
-                )
-              }
-            : todo
-        )
-      );
-    }
-  };
-
-  // Delete a subtask
-  const handleDeleteSubtask = (todoId: number, subtaskId: number) => {
-    setTodos(prevTodos => {
-      const updatedTodos = prevTodos.map(todo => 
-        todo.id === todoId 
-          ? {
-              ...todo,
-              subtasks: todo.subtasks.filter(subtask => subtask.id !== subtaskId)
-            } 
-          : todo
-      );
-      
-      // Find the updated todo
-      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
-      if (updatedTodo) {
-        // Recalculate the latest due date from remaining subtasks
-        const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
-        
-        // Check if this was the last subtask
-        const noSubtasksRemain = updatedTodo.subtasks.length === 0;
-        
-        // Update the parent task's due date and collapse if no subtasks remain
-        return updatedTodos.map(todo => 
-          todo.id === todoId ? { 
-            ...todo, 
-            dueDate: latestDate,
-            // If no subtasks remain, collapse the panel
-            isExpanded: noSubtasksRemain ? false : todo.isExpanded
-          } : todo
-        );
-      }
-      
-      return updatedTodos;
-    });
-  };
-
-  // Toggle subtask calendar
-  const toggleSubtaskCalendar = (e: React.MouseEvent, todoId: number, subtaskId: number) => {
-    e.stopPropagation();
-    
-    // Close if the same subtask calendar is already open
-    if (calendarOpenForSubtask &&
-       calendarOpenForSubtask.todoId === todoId &&
-       calendarOpenForSubtask.subtaskId === subtaskId) {
-      setCalendarOpenForSubtask(null);
-    } else {
-      setSubtaskCalendarDate(new Date()); // Reset to current month when opening a different subtask calendar
-      setCalendarOpenForSubtask({ todoId, subtaskId });
-    }
-    
-    // Close any other calendars
-    if (calendarOpenForId !== null) {
-      setCalendarOpenForId(null);
-    }
-    
-    if (isNewTaskCalendarOpen) {
-      setIsNewTaskCalendarOpen(false);
-    }
-  };
-
-  // Add functions to navigate between months
-  const navigateMonth = (date: Date, direction: 'prev' | 'next'): Date => {
-    const newDate = new Date(date);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    return newDate;
-  };
-
-  const handleCalendarNavigation = (direction: 'prev' | 'next', type: 'task' | 'newTask' | 'subtask') => {
-    if (type === 'task') {
-      setCalendarCurrentDate(navigateMonth(calendarCurrentDate, direction));
-    } else if (type === 'newTask') {
-      setNewTaskCalendarDate(navigateMonth(newTaskCalendarDate, direction));
-    } else {
-      setSubtaskCalendarDate(navigateMonth(subtaskCalendarDate, direction));
-    }
-  };
-
-  // Update handleSubtaskDateSelect to check and update parent task date
-  const handleSubtaskDateSelect = (todoId: number, subtaskId: number, date: Date) => {
-    setTodos(prevTodos => {
-      // Find the parent task
-      const parentTask = prevTodos.find(todo => todo.id === todoId);
-      
-      // Update the subtask with the new date
-      const updatedTodos = prevTodos.map(todo => 
-        todo.id === todoId 
-          ? {
-              ...todo,
-              subtasks: todo.subtasks.map(subtask => 
-                subtask.id === subtaskId 
-                  ? { ...subtask, dueDate: date } 
-                  : subtask
-              )
-            } 
-          : todo
-      );
-      
-      // Find the updated todo
-      const updatedTodo = updatedTodos.find(todo => todo.id === todoId);
-      if (updatedTodo) {
-        // If parent has a due date and the new subtask date is later,
-        // update the parent task's due date to match the subtask
-        if (parentTask && parentTask.dueDate && date > parentTask.dueDate) {
-          return updatedTodos.map(todo => 
-            todo.id === todoId ? { ...todo, dueDate: new Date(date) } : todo
-          );
-        }
-        
-        // If parent has no due date, update it to the latest subtask date
-        if (!parentTask?.dueDate) {
-          const latestDate = getLatestSubtaskDate(updatedTodo.subtasks);
-          if (latestDate) {
-            return updatedTodos.map(todo => 
-              todo.id === todoId ? { ...todo, dueDate: latestDate } : todo
-            );
-          }
-        }
-      }
-      
-      return updatedTodos;
-    });
-    
-    // Close the calendar
-    setCalendarOpenForSubtask(null);
-  };
-
-  // Handle keyboard events for subtask editing
-  const handleSubtaskKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (editingSubtaskId) {
-        handleEditSubtaskSave();
-      } else if (addingSubtaskForId !== null) {
-        handleSaveNewSubtask(addingSubtaskForId);
-      }
-    } else if (e.key === 'Escape') {
-      if (editingSubtaskId) {
-        handleEditSubtaskCancel();
-      } else if (addingSubtaskForId !== null) {
-        handleCancelAddSubtask();
-      }
-    }
-  };
-
-  // Handle app title editing
-  const handleTitleEditStart = () => {
-    setIsEditingTitle(true);
-  };
-  
-  const handleTitleEditSave = () => {
-    // Trim the title but keep it even if empty (can use a default in the JSX)
-    setAppTitle(appTitle.trim());
-    setIsEditingTitle(false);
-  };
-  
-  const handleTitleEditCancel = () => {
-    // If user cancels, revert to the saved title
-    const savedTitle = localStorage.getItem('appTitle');
-    if (savedTitle) {
-      setAppTitle(savedTitle);
-    } else {
-      setAppTitle('Your to-dos');
-    }
-    setIsEditingTitle(false);
-  };
-  
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTitleEditSave();
-    } else if (e.key === 'Escape') {
-      handleTitleEditCancel();
-    }
-  };
-
-  // Toggle settings menu
-  const toggleSettings = () => {
-    setIsSettingsOpen(!isSettingsOpen);
-  };
-
-  // Toggle history drawer
-  const toggleHistoryDrawer = useCallback(() => {
-    setIsHistoryDrawerOpen(!isHistoryDrawerOpen);
-  }, [isHistoryDrawerOpen]);
-  
-  // Add a new function to restore a completed task back to active tasks
+  // Function to restore a task from completed to active
   const handleRestoreTask = (taskId: number) => {
-    // Find the task in completed tasks
+    // Find the task to restore in completed tasks
     const taskToRestore = completedTasks.find(task => task.id === taskId);
-    
     if (!taskToRestore) return;
     
     // Create a restored version of the task
@@ -1796,11 +1485,56 @@ function App() {
     }, 3000);
   };
 
+  // Add Firebase auth listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // User is signed out, the authState useEffect will update state
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  // If still loading auth state, show a loading indicator
+  if (authLoading) {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </header>
+      </div>
+    );
+  }
+
+  // If not authenticated, show login screen
+  if (!currentUser) {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <Login onLogin={() => console.log("Logged in successfully")} />
+        </header>
+      </div>
+    );
+  }
+
+  // Main app render for authenticated users
   return (
-    <div className={`App ${currentTheme === 'surprise' ? 'surprise-theme' : ''}`}>
-      {/* Add landscape and stars layers for Van Gogh theme */}
+    <div className={`App ${currentTheme}`}>
       {currentTheme === 'vangogh' && (
         <>
+          <div className="sky-layer"></div>
           <div className="landscape-layer"></div>
           <div className="stars-layer"></div>
         </>
@@ -1978,14 +1712,6 @@ function App() {
                   <div className="todo-controls">
                     {editingTaskId !== todo.id && (
                       <>
-                        <button
-                          type="button"
-                          className="calendar-icon"
-                          onClick={(e) => toggleCalendar(e, todo.id)}
-                          aria-label="Set due date"
-                        >
-                          📅
-                        </button>
                         {todo.subtasks.length > 0 && (
                           <button
                             type="button"
@@ -2114,26 +1840,17 @@ function App() {
                                   </div>
                                 </div>
                                 
-                                {(!editingSubtaskId || editingSubtaskId.subtaskId !== subtask.id) && (
-                                  <div className="subtask-actions">
-                                    <button
-                                      type="button"
-                                      className="subtask-calendar-icon"
-                                      onClick={(e) => toggleSubtaskCalendar(e, todo.id, subtask.id)}
-                                      aria-label="Set subtask due date"
-                                    >
-                                      📅
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="delete-subtask-btn"
-                                      onClick={() => handleDeleteSubtask(todo.id, subtask.id)}
-                                      aria-label="Delete subtask"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                )}
+                                {/* Subtask actions */}
+                                <div className="subtask-actions">
+                                  <button
+                                    type="button"
+                                    className="delete-subtask-btn"
+                                    onClick={(e) => handleDeleteSubtask(todo.id, subtask.id)}
+                                    aria-label="Delete subtask"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
                               </div>
                             </SwipeableSubtask>
                           ))}
@@ -2188,7 +1905,7 @@ function App() {
                     ◀
                   </button>
                   <div className="month-title">
-                    {calendarCurrentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </div>
                   <button 
                     onClick={(e) => {
@@ -2220,8 +1937,8 @@ function App() {
                   
                   <div className="calendar-days">
                     {(() => {
-                      const year = calendarCurrentDate.getFullYear();
-                      const month = calendarCurrentDate.getMonth();
+                      const year = calendarDate.getFullYear();
+                      const month = calendarDate.getMonth();
                       
                       // Get first day of month and total days
                       const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -2564,6 +2281,25 @@ function App() {
                 </div>
               </div>
             </div>
+            
+            <div className="account-section">
+              <h4>Account</h4>
+              <div className="account-options">
+                <button 
+                  className="logout-button-settings" 
+                  onClick={handleLogout}
+                  title="Logout from your account"
+                >
+                  <span className="logout-icon">📤</span>
+                  <span>Logout</span>
+                </button>
+                {currentUser && (
+                  <div className="current-user">
+                    <span className="user-email">Logged in as: {currentUser.email}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2574,8 +2310,8 @@ function App() {
         onClick={toggleSettings}
         title="Settings"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M11.4892 3.17094C11.1102 1.60969 8.8898 1.60969 8.51078 3.17094C8.26594 4.17949 7.17543 4.65811 6.22876 4.13176C4.85044 3.33851 3.33851 4.85044 4.13176 6.22876C4.65811 7.17549 4.17949 8.26594 3.17094 8.51078C1.60969 8.8898 1.60969 11.1102 3.17094 11.4892C4.17949 11.7341 4.65811 12.8246 4.13176 13.7712C3.33851 15.1496 4.85044 16.6615 6.22876 15.8682C7.17543 15.3419 8.26594 15.8205 8.51078 16.8291C8.8898 18.3903 11.1102 18.3903 11.4892 16.8291C11.7341 15.8205 12.8246 15.3419 13.7712 15.8682C15.1496 16.6615 16.6615 15.1496 15.8682 13.7712C15.3419 12.8246 15.8205 11.7341 16.8291 11.4892C18.3903 11.1102 18.3903 8.8898 16.8291 8.51078C15.8205 8.26594 15.3419 7.17543 15.8682 6.22876C16.6615 4.85044 15.1496 3.33851 13.7712 4.13176C12.8246 4.65811 11.7341 4.17949 11.4892 3.17094ZM10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z" fill="currentColor"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fillRule="evenodd" clipRule="evenodd" d="M13.7870 3.8051C13.3323 1.93163 10.6677 1.93163 10.2130 3.8051C9.91913 5.01539 8.61052 5.78973 7.47451 5.15811C5.82053 4.20621 4.00621 6.02053 4.95811 7.67451C5.58973 8.81052 4.81539 10.1191 3.60511 10.413C1.73163 10.8677 1.73163 13.5323 3.60511 13.987C4.81539 14.2809 5.58973 15.5895 4.95811 16.7255C4.00621 18.3795 5.82053 20.1938 7.47451 19.2419C8.61052 18.6103 9.91913 19.3846 10.2130 20.5949C10.6677 22.4684 13.3323 22.4684 13.7870 20.5949C14.0809 19.3846 15.3895 18.6103 16.5255 19.2419C18.1795 20.1938 19.9938 18.3795 19.0419 16.7255C18.4103 15.5895 19.1846 14.2809 20.3949 13.987C22.2684 13.5323 22.2684 10.8677 20.3949 10.413C19.1846 10.1191 18.4103 8.81052 19.0419 7.67451C19.9938 6.02053 18.1795 4.20621 16.5255 5.15811C15.3895 5.78973 14.0809 5.01539 13.7870 3.8051ZM12 15.6C13.9882 15.6 15.6 13.9882 15.6 12C15.6 10.0118 13.9882 8.4 12 8.4C10.0118 8.4 8.4 10.0118 8.4 12C8.4 13.9882 10.0118 15.6 12 15.6Z" fill="currentColor"/>
         </svg>
       </button>
       
@@ -2585,9 +2321,9 @@ function App() {
         onClick={toggleHistoryDrawer}
         title="Task History"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 4V10L13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M12 7V12L15.5 15.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
       
@@ -3222,7 +2958,7 @@ function App() {
                   <button
                     className="details-date-select"
                     onClick={() => {
-                      setCalendarCurrentDate(new Date());
+                      setCalendarDate(new Date());
                       setDetailsCalendarOpen(true);
                     }}
                   >
@@ -3236,22 +2972,22 @@ function App() {
                     <button
                       className="month-nav"
                       onClick={() => {
-                        const newDate = new Date(calendarCurrentDate);
+                        const newDate = new Date(calendarDate);
                         newDate.setMonth(newDate.getMonth() - 1);
-                        setCalendarCurrentDate(newDate);
+                        setCalendarDate(newDate);
                       }}
                     >
                       &lt;
                     </button>
                     <div className="month-label">
-                      {calendarCurrentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      {calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                     </div>
                     <button
                       className="month-nav"
                       onClick={() => {
-                        const newDate = new Date(calendarCurrentDate);
+                        const newDate = new Date(calendarDate);
                         newDate.setMonth(newDate.getMonth() + 1);
-                        setCalendarCurrentDate(newDate);
+                        setCalendarDate(newDate);
                       }}
                     >
                       &gt;
@@ -3264,8 +3000,8 @@ function App() {
                   </div>
                   <div className="calendar-days">
                     {(() => {
-                      const year = calendarCurrentDate.getFullYear();
-                      const month = calendarCurrentDate.getMonth();
+                      const year = calendarDate.getFullYear();
+                      const month = calendarDate.getMonth();
                       const firstDayOfMonth = new Date(year, month, 1);
                       const lastDayOfMonth = new Date(year, month + 1, 0);
                       
@@ -3351,4 +3087,14 @@ function App() {
   );
 }
 
+// Wrap the App component with the AuthProvider
+function AppWithAuth() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
+
+export { AppWithAuth };
 export default App;
