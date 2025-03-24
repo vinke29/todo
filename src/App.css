@@ -14,15 +14,15 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: transparent;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 60px;
+  padding-top: 20px;
   font-size: calc(10px + 1.5vmin);
-  color: white;
+  color: black;
 }
 
 .App-link {
@@ -1056,10 +1056,10 @@ button:disabled {
   right: 20px;
   background: #ffffff;
   border-radius: 12px;
-  padding: 1.25rem;
+  padding: 1.5rem;
   z-index: 1000;
-  width: 560px !important; /* Reduced from 640px */
-  min-width: 560px !important; 
+  width: 460px !important; /* Slightly wider to accommodate the cards */
+  min-width: 400px !important;
   max-width: 90vw; /* Still maintain responsiveness for small screens */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -1070,909 +1070,424 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
-  padding: 0.5rem 1rem 0.75rem 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  padding-left: 0.75rem; /* Added left padding for the Settings text */
+  border-bottom: 1px solid #eee;
 }
 
-.settings-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1a1a1a;
+.settings-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0 0.5rem;
+  padding-top: 0; /* Remove top padding */
+}
+
+.theme-section, .account-section {
+  margin-bottom: 2rem;
+  position: relative;
 }
 
 .theme-section {
-  margin-bottom: 1.25rem;
-  padding: 0 1.5rem;
+  margin-top: 0;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed #ddd;
+}
+
+.theme-section::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background-color: #999;
 }
 
 .theme-section h4 {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 500;
+  color: #2980b9; /* Blue color to match the COMING SOON badges */
+}
+
+.account-section {
+  margin-top: 2rem; /* Increased from 1rem to 2rem for more separation */
+  padding: 1.5rem 1.25rem; /* Slightly increased padding */
+  background-color: #f8f8f8;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0; /* Slightly darker border */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Subtle shadow for depth */
+}
+
+.theme-section h4, .account-section h4 {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 1px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.account-section h4 {
+  margin: 0 1.5rem 1.25rem 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  color: #555; /* Slightly darker for contrast */
+}
+
+.account-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.logout-button-settings {
+  display: flex;
+  align-items: center;
+  padding: 0.9rem 1.1rem;
+  background-color: #f0f0f0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  color: #333;
+  width: 100%;
+  justify-content: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.logout-button-settings:hover {
+  background-color: #e8e8e8;
+  border-color: #d0d0d0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+}
+
+.logout-icon {
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+  color: #2980b9; /* Blue color to match theme */
+}
+
+.current-user {
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
   color: #666;
 }
 
+.user-email {
+  font-style: italic;
+}
+
+/* Theme options grid layout */
 .theme-options {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* Changed to 4 columns for better fit */
-  gap: 1.2rem; /* Slightly reduced gap */
-  margin: 0;
-  padding: 0;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 0.5rem; /* Reduced space after heading */
 }
 
 .theme-option {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 2px solid transparent;
   cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
   text-align: center;
-  transition: transform 0.2s ease;
-  padding: 0.5rem;
-  border-radius: 10px;
-  background: transparent;
-  position: relative; /* For positioning the Coming Soon badge */
-}
-
-/* Style for Coming Soon badge */
-.coming-soon-badge {
-  position: absolute;
-  bottom: 5px;
-  left: 0;
-  right: 0;
-  background-color: rgba(236, 93, 93, 0.85);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: bold;
-  padding: 2px 0;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .theme-option:hover {
-  transform: translateY(-2px);
-  background: rgba(0, 0, 0, 0.02);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
-.theme-option.selected {
-  background: rgba(0, 122, 255, 0.05);
+.theme-option.active {
+  border-color: #61dafb;
+  background-color: rgba(97, 218, 251, 0.05);
+  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.2);
 }
 
 .theme-preview {
-  width: 100%;
-  height: 90px;
-  border-radius: 8px;
-  margin-bottom: 0.6rem;
+  height: 120px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.theme-option.selected .theme-preview {
-  outline: 2px solid #007aff;
-  outline-offset: 2px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  flex-grow: 1;
+  position: relative;
 }
 
 .theme-option span {
   display: block;
-  font-size: 0.85rem;
+  padding: 14px 8px; /* Increased top padding from 12px to 14px */
+  font-size: 1rem;
   font-weight: 500;
-  color: #333;
-  margin-top: 0.4rem;
+  background-color: white;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  position: relative;
+  z-index: 5; /* Ensure the theme name is above the badge */
 }
 
-/* Default theme preview */
-.default-preview {
-  background: #f8f9fa;
+.coming-soon-badge {
+  position: absolute;
+  bottom: 40px; /* Increased from 35px to 40px to create more separation */
+  left: 0;
+  right: 0;
+  background-color: #2980b9; /* Blue color for the badge */
+  color: white;
+  font-size: 0.75rem;
+  padding: 6px 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+  z-index: 2;
 }
 
-.default-preview .preview-header {
-  height: 20%;
-  background: #007aff;
+/* Mondrian theme styles for settings */
+.mondrian .settings-menu {
+  border: 3px solid black;
 }
 
-.default-preview .preview-content {
-  padding: 8px;
+.mondrian .settings-header {
+  border-bottom: 3px solid black;
+  padding-left: 0.75rem; /* Added left padding for Mondrian theme as well */
 }
 
-.default-preview .preview-line {
-  height: 8px;
-  background: #e9ecef;
-  margin: 8px 0;
-  border-radius: 4px;
+.mondrian .theme-option.active {
+  border: 3px solid black;
+  box-shadow: none;
 }
 
-/* Mondrian theme preview */
+/* Specific theme preview styles */
 .mondrian-preview {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 4px;
-  padding: 4px;
-  background: #000;
+  height: 100%;
+  background-color: black;
 }
 
-.mondrian-preview .preview-block {
-  background: #fff;
+.preview-block {
+  background-color: white;
 }
 
-.mondrian-preview .preview-block.red {
-  background: #e74c3c;
+.preview-block.red {
+  background-color: #d42c2c;
   grid-row: span 2;
 }
 
-.mondrian-preview .preview-block.blue {
-  background: #3498db;
+.preview-block.blue {
+  background-color: #005EB8;
 }
 
-.mondrian-preview .preview-block.yellow {
-  background: #f1c40f;
+.preview-block.yellow {
+  background-color: #FFD700;
 }
 
 /* Van Gogh theme preview */
 .vangogh-preview {
+  background: linear-gradient(to bottom, #00008B 50%, #003366 80%, #001133 100%);
   position: relative;
-  background: #1a4f8c;
   overflow: hidden;
 }
 
-.vangogh-preview .preview-sky {
+.vangogh-preview::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 70%;
-  background: linear-gradient(to bottom, #1a4f8c, #2e5ea0);
-}
-
-.vangogh-preview .preview-stars {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 70%;
-  background-image: 
-    radial-gradient(circle at 20% 20%, #f7d859 1px, transparent 1px),
-    radial-gradient(circle at 80% 40%, #f7d859 1px, transparent 1px),
-    radial-gradient(circle at 40% 60%, #f7d859 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.vangogh-preview .preview-hills {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
-  background: #27436b;
-  clip-path: polygon(0 100%, 30% 50%, 70% 80%, 100% 60%, 100% 100%);
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.7) 1px, transparent 1px);
+  background-size: 15px 15px;
 }
 
 /* Le Corbusier theme preview */
 .lecorbusier-preview {
-  background: #f5f5f5;
-  padding: 4px;
-}
-
-.lecorbusier-preview .preview-grid {
-  height: 100%;
   display: grid;
   grid-template-columns: 2fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 4px;
+  gap: 3px;
+  background-color: black;
 }
 
-.lecorbusier-preview .preview-block {
-  background: #32343a;
+.lecorbusier-preview .block1 {
+  background-color: #333;
+  grid-row: span 2;
 }
 
-.lecorbusier-preview .preview-block.accent {
-  background: #f1c40f;
+.lecorbusier-preview .block2 {
+  background-color: #FFD700;
 }
 
-.lecorbusier-preview .preview-block.primary {
-  background: #b33f3e;
+.lecorbusier-preview .block3 {
+  background-color: #A52A2A;
 }
 
 /* Surprise theme preview */
 .surprise-preview {
-  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
   position: relative;
   overflow: hidden;
 }
 
-.surprise-preview .preview-random {
+.surprise-preview::after {
+  content: "";
   position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-}
-
-.surprise-preview .preview-sparkle {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 50%;
-  animation: sparkle 1.5s infinite;
-}
-
-.surprise-preview .preview-sparkle:nth-child(2) {
-  animation-delay: 0.5s;
-}
-
-.surprise-preview .preview-sparkle:nth-child(3) {
-  animation-delay: 1s;
-}
-
-@keyframes sparkle {
-  0%, 100% { transform: scale(0.3); opacity: 0.3; }
-  50% { transform: scale(1); opacity: 1; }
-}
-
-/* Settings Icon */
-.settings-icon {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  background: white;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  z-index: 1000;
-}
-
-.settings-icon:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.settings-icon:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* History Icon */
-.history-icon {
-  position: fixed;
-  bottom: 20px;
-  right: 80px; /* Position to the left of settings icon */
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  background: white;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  z-index: 1000;
-  color: #555;
-}
-
-.history-icon:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-  color: #61dafb;
-}
-
-.history-icon:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* History drawer styles */
-.history-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 350px;
-  background-color: white;
-  box-shadow: -2px 0 15px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: transform 0.3s ease;
-}
-
-.history-drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-  background-color: #f8f9fa;
-  flex-shrink: 0;
-}
-
-.history-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.no-history {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100px;
-  color: #999;
-  font-style: italic;
-}
-
-.close-history-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.close-history-btn:hover {
-  color: #333;
-}
-
-/* Improve history section styling */
-.history-section {
-  margin-top: 20px;
-}
-
-.history-section-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 15px 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Update history item to have a consistent structure */
-.history-item {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 12px;
-}
-
-/* Improve task main layout */
-.history-item .history-task-main {
-  display: flex;
-  align-items: flex-start;
-  padding: 0;
-  margin-bottom: 10px;
-}
-
-/* Improve checkbox alignment with title */
-.history-item .checkbox,
-.history-item .subtask-checkbox {
-  min-width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  border: 2px solid #61dafb;
-  background-color: transparent;
-  color: #282c34;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  cursor: pointer;
-  padding: 0;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  margin-top: 2px; /* Align with the first line of text */
-}
-
-.history-item .checkbox.checked,
-.history-item .subtask-checkbox.checked {
-  background-color: #61dafb;
-}
-
-/* Improve task header layout */
-.history-task-header {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.history-task-text {
-  font-weight: 600;
-  display: block;
-  margin-bottom: 5px;
-  color: inherit;
-}
-
-.history-task-text:hover, 
-.history-parent-task-text:hover,
-.history-subtask-text:hover {
-  text-decoration: underline;
-  opacity: 0.9;
-}
-
-.history-due-date, 
-.history-done-date {
-  font-size: 0.8rem;
-  display: block;
-  margin: 0;
-  line-height: 1.2;
-}
-
-/* Improve subtask section */
-.history-subtasks {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
-}
-
-/* Parent task in active tasks section */
-.history-item.active-parent .history-task-main {
-  margin-bottom: 12px;
-}
-
-.history-parent-task-text {
-  color: #444;
-  font-weight: 600;
-  font-style: italic;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Dark mode updates */
-.App-header .history-drawer {
-  background-color: #282c34;
-  color: white;
-  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
-}
-
-.App-header .history-drawer-header {
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
-}
-
-.App-header .history-drawer-header h3 {
-  color: white;
-}
-
-.App-header .close-history-btn {
-  color: #ccc;
-}
-
-.App-header .close-history-btn:hover {
-  color: white;
-}
-
-.App-header .history-item {
-  background-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.App-header .history-task-text {
-  color: white;
-}
-
-.App-header .history-subtask-item {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.App-header .history-subtask-text {
-  color: #eee;
-}
-
-.App-header .no-history {
-  color: #aaa;
-}
-
-.history-item.active-parent {
-  border-left: 4px solid #61dafb;
-}
-
-.App-header .history-section-title {
-  color: #f8f9fa;
-  border-bottom-color: #444;
-}
-
-.App-header .history-item.active-parent {
-  border-left: 4px solid #61dafb;
-}
-
-.App-header .history-parent-task-text {
-  color: #ddd;
-}
-
-/* Add styles for the date container */
-.history-date-container {
-  display: flex;
-  flex-direction: column;
-  margin-top: 2px;
-}
-
-/* Style for task dates */
-.history-due-date {
-  color: #61dafb;
-}
-
-.history-done-date {
-  color: #4bb543;
-}
-
-/* Style for subtask content container */
-.history-subtask-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-/* Checkbox styles */
-.checkbox, .subtask-checkbox {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #61DAFB;
-  border-radius: 4px;
-  margin-right: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-
-.checkbox:hover, .subtask-checkbox:hover {
-  background-color: rgba(97, 218, 251, 0.1);
-}
-
-.checkbox.checked, .subtask-checkbox.checked {
-  background-color: rgba(97, 218, 251, 0.3);
-}
-
-/* Subtask item styling */
-.history-subtask-item {
-  display: flex;
-  align-items: flex-start;
-  padding: 8px 10px;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.history-subtask-text {
-  font-weight: 500;
-  margin-right: 5px;
-  display: block;
-  margin-bottom: 3px;
-  color: inherit;
-}
-
-.history-subtask-dates {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  margin-top: 4px;
+  height: 100%;
+  background: radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.8) 5px, transparent 6px),
+              radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.8) 5px, transparent 6px);
 }
 
-.history-subtask-due-date, 
-.history-subtask-done-date {
-  font-size: 0.7rem;
-  line-height: 1.2;
-  margin: 0;
+/* Zaha Hadid theme preview */
+.zahahadid-preview {
+  background: linear-gradient(to right, #f5f5f5 0%, #e0e0e0 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-/* History filter styles */
-.history-filters {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
+.zahahadid-preview::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent 48%, #3498db 48%, #3498db 52%, transparent 52%);
+  background-size: 30px 30px;
 }
 
-.filter-tabs {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+/* Ensure the settings content scrolls properly */
+.settings-content {
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 8px; /* Add some space for the scrollbar */
+  scrollbar-width: thin;
 }
 
-.filter-tab {
-  padding: 8px 12px;
-  background-color: rgba(97, 218, 251, 0.1);
-  border: 1px solid rgba(97, 218, 251, 0.3);
+/* Make sure the content doesn't overflow */
+.settings-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-  color: #444;
-  flex: 1;
-  min-width: 90px;
-  text-align: center;
 }
 
-.filter-tab:hover {
-  background-color: rgba(97, 218, 251, 0.2);
-  transform: translateY(-2px);
+/* Apply specific styling for the surprise me option */
+.theme-option:last-child .theme-preview {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
 }
 
-.filter-tab.active {
-  background-color: rgba(97, 218, 251, 0.3);
-  border-color: rgba(97, 218, 251, 0.6);
-  font-weight: 500;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+  .settings-menu {
+    width: 90% !important;
+    min-width: 280px !important;
+    left: 5%;
+    right: 5%;
+    bottom: 70px;
+  }
+  
+  .theme-options {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
-.custom-date-range {
-  background-color: rgba(97, 218, 251, 0.05);
-  border: 1px solid rgba(97, 218, 251, 0.2);
-  border-radius: 4px;
-  padding: 10px;
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.date-range-display {
+/* Loading spinner */
+.loading-container {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 0.8rem;
-  color: #555;
-}
-
-.edit-date-range-btn {
-  background-color: rgba(97, 218, 251, 0.2);
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-  color: #444;
-}
-
-.edit-date-range-btn:hover {
-  background-color: rgba(97, 218, 251, 0.3);
-  transform: translateY(-2px);
-}
-
-/* Dark mode styles for filters */
-.App-header .history-filters {
-  border-bottom-color: #444;
-}
-
-.App-header .filter-tab {
-  background-color: rgba(97, 218, 251, 0.1);
-  border-color: rgba(97, 218, 251, 0.3);
-  color: #ccc;
-}
-
-.App-header .filter-tab:hover {
-  background-color: rgba(97, 218, 251, 0.2);
-}
-
-.App-header .filter-tab.active {
-  background-color: rgba(97, 218, 251, 0.3);
-  border-color: rgba(97, 218, 251, 0.6);
-  color: white;
-}
-
-.App-header .custom-date-range {
-  background-color: rgba(97, 218, 251, 0.1);
-  border-color: rgba(97, 218, 251, 0.3);
-}
-
-.App-header .date-range-display {
-  color: #ccc;
-}
-
-.App-header .edit-date-range-btn {
-  background-color: rgba(97, 218, 251, 0.2);
-  color: #eee;
-}
-
-.App-header .edit-date-range-btn:hover {
-  background-color: rgba(97, 218, 251, 0.3);
-}
-
-/* Productivity Stats styles */
-.productivity-stats {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin: 10px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e9ecef;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
-}
-
-.productivity-stats:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.stats-header {
-  color: #343a40;
-  text-align: center;
-  margin-bottom: 12px;
-  font-size: 1.2rem;
-}
-
-.stats-message {
-  color: #495057;
-}
-
-.stats-encouragement {
-  margin-top: 12px;
-  font-style: italic;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-/* New time status indicators */
-.on-time {
-  color: #28a745;
-}
-
-.late {
-  color: #dc3545;
-}
-
-/* Dark mode styles */
-.App-header .productivity-stats {
-  background-color: rgba(97, 218, 251, 0.15);
-  border-color: rgba(97, 218, 251, 0.3);
-}
-
-.App-header .stats-header {
-  color: #f8f9fa;
-}
-
-.App-header .stats-message {
-  color: #ddd;
-}
-
-.App-header .stats-encouragement {
-  color: #6ddb65;
-}
-
-/* History Drawer Styles */
-.history-due-date {
-  font-size: 0.8em;
-  color: #ff9800;
-  margin-left: 8px;
-}
-
-/* Completion status labels for history items */
-.completion-status {
-  font-size: 0.8em;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-  margin-left: 8px;
-  display: inline-block;
-  text-align: center;
-}
-
-.completion-status.on-time {
-  background-color: rgba(75, 181, 67, 0.2);
-  color: #4bb543;
-  border: 1px solid rgba(75, 181, 67, 0.4);
-}
-
-.completion-status.late {
-  background-color: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.4);
-}
-
-/* Dark mode styles for completion status */
-.App-header .completion-status.on-time {
-  background-color: rgba(75, 181, 67, 0.3);
-  color: #6ddb65;
-  border-color: rgba(109, 219, 101, 0.4);
-}
-
-.App-header .completion-status.late {
-  background-color: rgba(231, 76, 60, 0.3);
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.4);
-}
-
-/* Dark mode styles for calendar popup */
-.App-header .calendar-popup {
-  background-color: #333;
-  border-color: #555;
-}
-
-.App-header .month-title {
-  color: #fff;
-}
-
-.App-header .weekday {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* Dark mode styles for calendar days */
-.App-header .calendar-day {
-  background: #444;
-  color: white;
-}
-
-.App-header .calendar-day:hover {
-  background: #555;
-}
-
-.completion-message {
-  display: flex;
   justify-content: center;
-  margin: 30px 0;
-  padding: 20px;
-  background-color: #f0f8ff; /* Light blue background */
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  animation: fadeIn 0.5s ease-in-out;
+  align-items: center;
+  min-height: 100vh;
 }
 
-.completion-message span {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: #4a90e2; /* Blue text color */
-  text-align: center;
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(97, 218, 251, 0.2);
+  border-radius: 50%;
+  border-top-color: #61dafb;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* For Mondrian theme */
-.mondrian .completion-message {
-  background-color: #fff;
-  border: 3px solid #000;
-  box-shadow: none;
+/* User profile styles */
+.user-profile {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
 }
 
-.mondrian .completion-message span {
-  color: #000;
+.user-email {
+  font-size: 14px;
+  margin-right: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 
-/* For Van Gogh theme */
-.vangogh .completion-message {
-  background-color: #293462;
+.logout-button {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.logout-button:hover {
+  background-color: rgba(231, 76, 60, 0.4);
+  transform: translateY(-2px);
+}
+
+.logout-button:active {
+  transform: translateY(0);
+}
+
+/* Van Gogh theme styles for user profile */
+.vangogh .user-profile {
+  background-color: rgba(42, 79, 138, 0.5);
   border: none;
 }
 
-.vangogh .completion-message span {
-  color: #f7d06b;
+.vangogh .user-email {
+  color: #f7d859;
 }
 
-/* For Le Corbusier theme */
-.lecorbusier .completion-message {
-  background-color: #fff;
-  border: 2px solid #b32821;
+.vangogh .logout-button {
+  background-color: rgba(42, 79, 138, 0.8);
+  color: #f7d859;
+  border: 1px solid #f7d859;
 }
 
-.lecorbusier .completion-message span {
-  color: #b32821;
+.vangogh .logout-button:hover {
+  background-color: rgba(42, 79, 138, 1);
 }
 
 /* Details Drawer (for task and subtask editing) */
@@ -2036,43 +1551,7 @@ button:disabled {
   color: #ecf0f1;
 }
 
-/* Add more space at the top of all inputs */
 .details-field input, 
-.details-field textarea {
-  margin-top: 4px;
-}
-
-/* Improve label styles for Mondrian theme */
-.mondrian .details-field label {
-  color: #000;
-  font-weight: 600;
-}
-
-/* Fix the layout for fields */
-.details-field input,
-.details-field textarea,
-.details-due-date {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Format the title and labels consistently */
-.details-drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-
-.details-field label {
-  text-align: left;
-  font-size: 1rem;
-  margin-bottom: 8px;
-}
-
-.details-field input,
 .details-field textarea {
   width: 100%;
   padding: 8px 12px;
@@ -2138,20 +1617,6 @@ button:disabled {
   background-color: #2c3e50;
 }
 
-/* Notes indicator for tasks and subtasks */
-.task-notes-indicator,
-.subtask-notes-indicator {
-  margin-left: 6px;
-  font-size: 0.9rem;
-  color: #7f8c8d;
-  opacity: 0.8;
-}
-
-.App-header .task-notes-indicator,
-.App-header .subtask-notes-indicator {
-  color: #bdc3c7;
-}
-
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -2161,242 +1626,26 @@ button:disabled {
   }
 }
 
-/* Mondrian theme styling for details drawer */
-.mondrian.App-header .details-drawer,
-.mondrian .details-drawer {
-  background-color: white !important;
-  border-left: 5px solid black !important;
-  box-shadow: -5px 0 0 rgba(0, 0, 0, 0.8) !important;
-  color: black !important;
-}
-
-.mondrian.App-header .details-drawer-header,
-.mondrian .details-drawer-header {
-  border-bottom: 5px solid black !important;
-  background-color: #d42c2c !important; /* Mondrian red */
-  color: white !important;
-  padding: 18px 20px !important;
-}
-
-.mondrian.App-header .details-drawer-header h3,
-.mondrian .details-drawer-header h3 {
-  font-weight: bold !important;
-  text-transform: uppercase !important;
-  letter-spacing: 1px !important;
-  color: white !important;
-}
-
-.mondrian.App-header .details-content,
-.mondrian .details-content {
-  padding: 25px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 20px !important;
-  background-color: white !important;
-}
-
-.mondrian.App-header .details-field,
-.mondrian .details-field {
-  background-color: white !important;
-  padding: 15px !important;
-  border: 3px solid black !important;
-  margin-bottom: 25px !important;
-}
-
-.mondrian.App-header .details-field:nth-child(2),
-.mondrian .details-field:nth-child(2) {
-  border-color: #225e9a !important; /* Mondrian blue */
-}
-
-.mondrian.App-header .details-field:nth-child(3),
-.mondrian .details-field:nth-child(3) {
-  border-color: #FFD700 !important; /* Mondrian yellow */
-}
-
-.mondrian.App-header .details-field label,
-.mondrian .details-field label {
-  color: black !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  font-size: 0.9rem !important;
-  padding-bottom: 5px !important;
-  border-bottom: 2px solid black !important;
-  display: block !important;
-  margin-bottom: 15px !important;
-}
-
-.mondrian.App-header .details-field input,
-.mondrian.App-header .details-field textarea,
-.mondrian .details-field input,
-.mondrian .details-field textarea {
-  border: 3px solid black !important;
-  background-color: white !important;
-  color: black !important;
-  font-weight: 500 !important;
-  padding: 12px !important;
-}
-
-.mondrian.App-header .details-field textarea,
-.mondrian .details-field textarea {
-  min-height: 150px !important;
-}
-
-.mondrian.App-header .details-buttons,
-.mondrian .details-buttons {
-  display: flex !important;
-  justify-content: space-between !important;
-  gap: 20px !important;
-  margin-top: 30px !important;
-}
-
-.mondrian.App-header .save-details,
-.mondrian.App-header .cancel-details,
-.mondrian .save-details,
-.mondrian .cancel-details {
-  flex: 1 !important;
-  height: 45px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 1px !important;
-  border: 3px solid black !important;
-  transition: transform 0.2s, box-shadow 0.2s !important;
-}
-
-.mondrian.App-header .save-details,
-.mondrian .save-details {
-  background-color: #d42c2c !important; /* Mondrian red */
-  color: white !important;
-}
-
-.mondrian.App-header .save-details:hover,
-.mondrian .save-details:hover {
-  background-color: #b51f1f !important;
-  transform: translateY(-3px) !important;
-  box-shadow: 0 5px 0 black !important;
-}
-
-.mondrian.App-header .cancel-details,
-.mondrian .cancel-details {
-  background-color: #225e9a !important; /* Mondrian blue */
-  color: white !important;
-}
-
-.mondrian.App-header .cancel-details:hover,
-.mondrian .cancel-details:hover {
-  background-color: #194574 !important;
-  transform: translateY(-3px) !important;
-  box-shadow: 0 5px 0 black !important;
-}
-
-/* Mondrian theme styles for date elements */
-.mondrian.App-header .details-date-display,
-.mondrian .details-date-display {
-  background-color: white !important;
-  border: 3px solid #FFD700 !important; /* Mondrian yellow */
-  color: black !important;
-  font-weight: 600 !important;
-  padding: 12px 15px !important;
-  border-radius: 0 !important;
-}
-
-.mondrian.App-header .details-date-select,
-.mondrian .details-date-select {
-  background-color: #FFD700 !important; /* Mondrian yellow */
-  color: black !important;
-  border: 3px solid black !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  padding: 12px 18px !important;
-  border-radius: 0 !important;
-}
-
-.mondrian.App-header .details-date-select:hover,
-.mondrian .details-date-select:hover {
-  background-color: #e8c400 !important;
-}
-
-.mondrian.App-header .details-date-clear,
-.mondrian .details-date-clear {
-  color: black !important;
-  font-size: 1.4rem !important;
-  margin-left: 12px !important;
-}
-
-.mondrian.App-header .details-calendar,
-.mondrian .details-calendar {
-  border: 3px solid black !important;
-  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8) !important;
-  background-color: white !important;
-  padding: 20px !important;
-  border-radius: 0 !important;
-}
-
-.mondrian .calendar-month {
-  border-bottom: 3px solid black !important;
-  padding-bottom: 10px !important;
-  margin-bottom: 15px !important;
-}
-
-.mondrian .month-label {
-  text-transform: uppercase !important;
-  font-weight: 700 !important;
-  letter-spacing: 1px !important;
-  color: black !important;
-}
-
-.mondrian .month-nav {
-  background-color: #225e9a !important; /* Mondrian blue */
-  color: white !important;
-  border: 2px solid black !important;
-  width: 32px !important;
-  height: 32px !important;
-}
-
-.mondrian .month-nav:hover {
-  background-color: #194574 !important;
-  transform: scale(1.1) !important;
-}
-
-.mondrian .weekday {
-  color: black !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  font-size: 0.7rem !important;
-  letter-spacing: 0.5px !important;
-}
-
-.mondrian .calendar-day {
-  border: 1px solid black !important;
-  height: 32px !important;
-  font-weight: 500 !important;
-  border-radius: 0 !important;
-}
-
-.mondrian .calendar-day:hover {
-  background-color: #f5f5f5 !important;
-  transform: scale(1.1) !important;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5) !important;
-}
-
-.mondrian .calendar-day.selected {
-  background-color: #d42c2c !important; /* Mondrian red */
-  color: white !important;
-  border: 2px solid black !important;
-  font-weight: 700 !important;
-}
-
-/* Mondrian theme note indicators */
-.mondrian .task-notes-indicator,
-.mondrian .subtask-notes-indicator {
-  background-color: #FFD700 !important; /* Mondrian yellow */
-  color: black !important;
-  border: 1px solid black !important;
-  padding: 2px 5px !important;
-  border-radius: 3px !important;
-  font-weight: 700 !important;
-  margin-left: 10px !important;
+/* Mobile styles */
+@media (max-width: 480px) {
+  .user-profile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .user-email {
+    margin-right: 0;
+    max-width: 100%;
+    font-size: 12px;
+  }
+  
+  .logout-button {
+    align-self: flex-end;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
 }
 
 /* Details Due Date styles */
@@ -2482,208 +1731,225 @@ button:disabled {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Month navigation in calendars */
-.calendar-month {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 5px 0;
+/* Custom styles for the notes indicator */
+.task-notes-indicator,
+.subtask-notes-indicator {
+  margin-left: 6px;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  opacity: 0.8;
 }
 
-.month-label {
-  flex-grow: 1;
-  text-align: center;
-  font-weight: 500;
-  font-size: 1rem;
-}
-
-/* Details drawer calendar month styling */
-.details-calendar .calendar-month {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 5px 5px;
-}
-
-.details-calendar .month-nav {
-  background: none;
-  border: none;
-  color: #333;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, background-color 0.2s ease;
-  border-radius: 50%;
-}
-
-.details-calendar .month-nav:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: scale(1.1);
-}
-
-.details-calendar .month-label {
-  flex-grow: 1;
-  text-align: center;
-  font-weight: 500;
-  font-size: 1rem;
-}
-
-.App-header .details-calendar .month-nav {
-  color: #ecf0f1;
-  background-color: rgba(52, 73, 94, 0.8);
-}
-
-.App-header .details-calendar .month-nav:hover {
-  background-color: #34495e;
-}
-
-/* Calendar days in details drawer */
-.details-calendar .calendar-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.details-calendar .calendar-day {
-  padding: 8px 0;
-  background: #f0f0f0;
-  border: none;
-  color: #333;
-  font-size: 0.8rem;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-}
-
-.details-calendar .calendar-day:hover {
-  background: #e0e0e0;
-  transform: scale(1.1);
-}
-
-.details-calendar .calendar-day.selected {
-  background-color: #61dafb;
-  color: white;
-  font-weight: 500;
-}
-
-.details-calendar .weekday-header {
-  margin-bottom: 8px;
-}
-
-.details-calendar .weekday {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #666;
-  padding: 5px 0;
-  font-weight: 500;
-}
-
-/* Dark mode styles */
-.App-header .details-calendar .calendar-day {
-  background: #34495e;
-  color: #ecf0f1;
-}
-
-.App-header .details-calendar .calendar-day:hover {
-  background: #2c3e50;
-}
-
-.App-header .details-calendar .calendar-day.selected {
-  background-color: #61dafb;
-  color: #1a1a1a;
-}
-
-.App-header .details-calendar .weekday {
+.App-header .task-notes-indicator,
+.App-header .subtask-notes-indicator {
   color: #bdc3c7;
 }
 
-/* More specific styling for title and notes fields in Mondrian */
-.mondrian .details-field:first-child {
+/* Mondrian theme styling for details drawer */
+.mondrian.App-header .details-drawer,
+.mondrian .details-drawer {
   background-color: white !important;
-  border: 3px solid #d42c2c !important; /* Red border for title field */
+  border-left: 5px solid black !important;
+  box-shadow: -5px 0 0 rgba(0, 0, 0, 0.8) !important;
+  color: black !important;
 }
 
-.mondrian.App-header .details-field:first-child label,
-.mondrian .details-field:first-child label {
-  border-bottom: 2px solid #d42c2c !important;
-  color: #d42c2c !important;
-  font-weight: 900 !important;
+.mondrian.App-header .details-drawer-header,
+.mondrian .details-drawer-header {
+  border-bottom: 5px solid black !important;
+  background-color: #d42c2c !important; /* Mondrian red */
+  color: white !important;
+  padding: 18px 20px !important;
 }
 
-.mondrian.App-header .details-field:nth-child(2) label,
-.mondrian .details-field:nth-child(2) label {
-  border-bottom: 2px solid #225e9a !important;
-  color: #225e9a !important;
-  font-weight: 900 !important;
+.mondrian.App-header .details-drawer-header h3,
+.mondrian .details-drawer-header h3 {
+  font-weight: bold !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: white !important;
 }
 
-.mondrian.App-header .details-field:nth-child(3) label,
-.mondrian .details-field:nth-child(3) label {
-  border-bottom: 2px solid #FFD700 !important;
-  color: #FFD700 !important;
-  font-weight: 900 !important;
+/* Settings and history icon styling - standardized */
+.settings-icon,
+.history-icon {
+  position: fixed;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(97, 218, 251, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #61dafb;
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s ease;
 }
 
-/* Fix for the buttons in Mondrian to ensure they appear correctly */
-.mondrian .details-buttons {
-  padding: 10px 0 !important;
+.settings-icon {
+  right: 20px;
 }
 
-/* Fix for the Set Due Date button in Mondrian */
-.mondrian .details-date-select {
-  margin-right: 10px !important;
+.history-icon {
+  right: 85px;
 }
 
-/* Hide calendar icons */
-.calendar-icon-wrapper,
-.calendar-icon,
-.new-task-calendar-icon,
-.subtask-calendar-icon {
-  display: none !important;
+.settings-icon:hover,
+.history-icon:hover {
+  transform: scale(1.1);
+  background-color: rgba(97, 218, 251, 0.3);
+  box-shadow: 0 4px 15px rgba(97, 218, 251, 0.3);
 }
 
-/* Also adjust the layout to accommodate the removal of the icons */
-.todo-controls {
-  gap: 4px; /* Reduced gap since we have fewer controls now */
+.settings-icon svg,
+.history-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
-.subtask-actions {
-  min-width: 28px; /* Only need space for the delete button now */
+/* Mondrian theme styling for settings and history icons */
+.mondrian .settings-icon {
+  background-color: #005EB8 !important; /* Mondrian blue */
+  color: white !important;
+  border: 2px solid black !important;
 }
 
-/* Update the todo text container to use more space */
-.todo-text-container {
-  flex-grow: 1;
-  max-width: 75%; /* Increased from 60% since we have fewer controls */
+.mondrian .settings-icon:hover {
+  background-color: #0070E0 !important;
 }
 
-/* Ensure the details drawer calendar remains visible */
-.details-calendar .month-nav,
-.details-calendar button,
-.details-drawer .calendar-day {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+.mondrian .history-icon {
+  background-color: #FFD700 !important; /* Changed from red to gold/yellow */
+  color: black !important; /* Changed text color to black for better contrast */
+  border: 2px solid black !important;
 }
 
-.delete-subtask-btn {
-  color: rgba(231, 76, 60, 0.7);
+.mondrian .history-icon:hover {
+  background-color: #FFDF2F !important; /* Lighter yellow on hover */
+}
+
+/* History drawer styling */
+.history-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  background-color: #f8f9fa;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.App-header .history-drawer {
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.history-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.App-header .history-drawer-header {
+  border-bottom: 1px solid #34495e;
+}
+
+.close-history-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.close-history-btn:hover {
+  color: #666;
+}
+
+.App-header .close-history-btn {
+  color: #bdc3c7;
+}
+
+.App-header .close-history-btn:hover {
+  color: #ecf0f1;
+}
+
+/* Mondrian theme styling for history drawer and icon */
+.mondrian.App-header .history-drawer,
+.mondrian .history-drawer {
+  background-color: white !important;
+  border-left: 5px solid black !important;
+  box-shadow: -5px 0 0 rgba(0, 0, 0, 0.8) !important;
+  color: black !important;
+}
+
+.mondrian.App-header .history-drawer-header,
+.mondrian .history-drawer-header {
+  border-bottom: 5px solid black !important;
+  background-color: #005EB8 !important; /* Mondrian blue */
+  color: white !important;
+  padding: 18px 20px !important;
+}
+
+.mondrian.App-header .history-drawer-header h3,
+.mondrian .history-drawer-header h3 {
+  font-weight: bold !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: white !important;
+}
+
+.mondrian .history-icon {
+  background-color: #FFD700 !important; /* Changed from red to gold/yellow */
+  color: black !important; /* Changed text color to black for better contrast */
+  border: 2px solid black !important;
+}
+
+.mondrian .history-icon:hover {
+  background-color: #FFDF2F !important; /* Lighter yellow on hover */
+}
+
+/* Edit button styles */
+.edit-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: rgba(97, 218, 251, 0.7);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.edit-btn:hover {
+  color: #61dafb;
+  background-color: rgba(97, 218, 251, 0.1);
+  transform: scale(1.1);
+}
+
+.edit-subtask-btn {
   background: none;
   border: none;
   font-size: 14px;
+  color: rgba(97, 218, 251, 0.7);
   cursor: pointer;
   padding: 4px;
   border-radius: 3px;
@@ -2695,185 +1961,287 @@ button:disabled {
   height: 28px;
 }
 
-.delete-subtask-btn:hover {
-  color: #e74c3c;
-  background-color: rgba(231, 76, 60, 0.1);
+.edit-subtask-btn:hover {
+  color: #61dafb;
+  background-color: rgba(97, 218, 251, 0.1);
   transform: scale(1.1);
 }
 
-/* Add styles for mobile swipe functionality */
-.swipeable-item {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease;
+/* Mondrian theme styling for edit buttons */
+.mondrian .edit-btn,
+.mondrian .edit-subtask-btn {
+  color: #005EB8 !important;
 }
 
-.swipe-action {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
+.mondrian .edit-btn:hover,
+.mondrian .edit-subtask-btn:hover {
+  background-color: rgba(0, 94, 184, 0.1) !important;
+  color: #005EB8 !important;
+}
+
+/* Calendar navigation styles for details drawer */
+.details-calendar .month-nav {
+  color: #000;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e74c3c;
-  color: white;
-  width: 0;
-  opacity: 0;
-  font-weight: bold;
-  transition: width 0.3s ease, opacity 0.3s ease;
+  padding: 0;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.details-calendar .month-nav:hover {
+  background-color: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+
+.details-calendar .month-nav:active {
+  background-color: rgba(230, 230, 230, 1);
+  transform: scale(0.95);
+}
+
+/* Fix calendar month header in details drawer */
+.calendar-month {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.details-calendar .calendar-month {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.month-label {
+  text-align: center;
+  flex-grow: 1;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.details-calendar .month-label {
+  color: #000;
+  font-size: 0.95rem;
+}
+
+.App-header .details-calendar .month-label {
+  color: #fff;
+}
+
+/* Mondrian theme specific styles for details calendar */
+.mondrian .details-calendar .month-nav {
+  border: 2px solid black;
+  color: black;
+  background-color: white;
+}
+
+.mondrian .details-calendar .month-nav:hover {
+  background-color: #f0f0f0;
+}
+
+.mondrian .details-calendar .month-nav:active {
+  background-color: #e0e0e0;
+}
+
+/* History drawer content styling */
+.history-content {
+  padding: 15px;
+}
+
+.history-filters {
+  margin-bottom: 20px;
+}
+
+.filter-tabs {
+  display: flex;
+  width: 100%;
+  border-radius: 8px;
   overflow: hidden;
-  z-index: 5; /* Ensure it stays above content */
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* For tasks with expanded subtasks */
-.swipe-action.includes-subtasks {
-  height: 100%; /* Ensure it covers the entire height */
-  bottom: 0;    /* Extend to the bottom */
+.filter-tab {
+  flex: 1;
+  padding: 10px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
 }
 
-.swipe-action.show {
-  width: 75px;
-  opacity: 1;
+.filter-tab.active {
+  background-color: #d42c2c;
+  color: white;
+  font-weight: 500;
 }
 
-.swipe-action-text {
-  padding: 0 15px;
-  white-space: nowrap;
+.filter-tab:first-child {
+  border-radius: 8px 0 0 8px;
 }
 
-/* When a task is expanded and has subtasks */
-li.swipe-open > .subtasks-container {
+.filter-tab:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.productivity-stats {
+  padding: 15px 0;
+  margin-bottom: 15px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  color: #d42c2c;
+}
+
+.stats-message {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.history-section {
+  padding: 15px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.history-section-title {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.no-history {
+  text-align: center;
+  padding: 20px 0;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+/* Mondrian theme styling for history content */
+.mondrian .filter-tab.active {
+  background-color: #005EB8;
+  border: 2px solid black;
+}
+
+.mondrian .productivity-stats,
+.mondrian .history-section {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.mondrian .stats-header {
+  color: #d42c2c;
+}
+
+/* Dark mode styles for history content */
+.App-header .filter-tab {
+  background-color: #34495e;
+  color: #ecf0f1;
+}
+
+.App-header .filter-tab.active {
+  background-color: #2980b9;
+}
+
+.App-header .productivity-stats,
+.App-header .history-section {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.App-header .stats-header {
+  color: #3498db;
+}
+
+.App-header .no-history {
+  color: #bdc3c7;
+}
+
+/* Mondrian theme styling for logout button */
+.mondrian .logout-button-settings {
+  background-color: white;
+  border: 3px solid black;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  font-weight: 600;
   position: relative;
-  z-index: 1; /* Keep below the delete action */
+  overflow: hidden;
+  color: black;
+  display: flex;
+  align-items: center;
+  height: 50px;
 }
 
-/* Make sure subtasks have their own swipe area independent of parent */
-.subtasks-list .swipeable-item {
-  overflow: hidden; /* Contain child swipe actions */
+/* Create the left blue box in pure Mondrian style */
+.mondrian .logout-button-settings::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  height: 100%;
+  background-color: #005EB8; /* Mondrian blue */
+  z-index: 1;
+  border-right: 3px solid black;
+}
+
+.mondrian .logout-button-settings:hover {
+  background-color: #f8f8f8;
+  transform: translateY(-2px);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.8);
+}
+
+.mondrian .logout-button-settings:active {
+  transform: translateY(0);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+}
+
+/* Style the text */
+.mondrian .logout-button-settings span {
   position: relative;
-  z-index: 2; /* Higher than parent list but lower than its own swipe action */
+  z-index: 2;
+  margin-left: 65px;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-  .delete-btn,
-  .delete-subtask-btn {
-    display: none;
-  }
-  
-  .swipeable-item {
-    touch-action: pan-y;
-  }
-  
-  /* Improve alignment of todo items on mobile */
-  .todo-main-row {
-    justify-content: space-between;
-    padding-right: 0; /* Remove any potential right padding */
-  }
-  
-  .todo-controls {
-    margin-left: auto; /* Push controls to the right */
-    min-width: unset; /* Remove minimum width */
-    padding-right: 0; /* No right padding */
-  }
-  
-  .add-subtask-btn {
-    margin-right: 0; /* Ensure no right margin */
-  }
-  
-  .todo-actions {
-    margin-right: 0; /* Remove right margin */
-  }
-  
-  /* Make sure the todo-item doesn't push the controls too far */
-  .todo-item {
-    max-width: 70%; /* Slightly reduced to give more space for controls */
-    padding-right: 8px; /* Less padding to the right */
-  }
-  
-  .todo-controls,
-  .subtask-actions {
-    min-width: auto; /* Calculate width based on content */
-    display: flex;
-    justify-content: flex-end; /* Align content to the right */
-  }
-  
-  /* Make parent task cover the full height when expanded */
-  .todo-list > .swipeable-item {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* Ensure the swipe action expands to cover subtasks */
-  .todo-list > .swipeable-item.swipe-open .swipe-action.includes-subtasks {
-    height: 100%; /* Cover the full height */
-  }
-  
-  /* Optimize settings menu for mobile */
-  .settings-menu {
-    width: 94% !important;
-    min-width: unset !important;
-    max-width: 350px !important;
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
-    border-radius: 10px;
-    padding: 1rem 0.5rem 1.5rem 0.5rem;
-  }
-  
-  .theme-section {
-    padding: 0 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  /* Make theme options display better on mobile */
-  .theme-options {
-    grid-template-columns: repeat(2, 1fr); /* Two columns on mobile */
-    gap: 0.75rem;
-  }
-  
-  .theme-option {
-    padding: 0.3rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .theme-preview {
-    height: 60px; /* Smaller preview on mobile */
-    margin-bottom: 0.4rem;
-  }
-  
-  .theme-option span {
-    font-size: 0.75rem;
-    margin-bottom: 20px; /* Make room for the Coming Soon badge */
-    display: block;
-    white-space: nowrap;
-  }
-  
-  .coming-soon-badge {
-    font-size: 0.65rem;
-    padding: 1px 0;
-    bottom: 2px;
-    position: absolute;
-    width: 100%;
-  }
-  
-  /* Ensure consistent height for theme options to prevent layout shifts */
-  .theme-option {
-    height: 110px;
-    position: relative;
-  }
-  
-  /* Add scroll to settings content if needed */
-  .settings-content {
-    max-height: 80vh;
-    overflow-y: auto;
-    padding-bottom: 10px;
-  }
-  
-  /* Ensure the Mondrian theme preview renders correctly on mobile */
-  .mondrian-preview .preview-block.red {
-    grid-row: span 2;
-  }
+/* Remove the icon styling as we'll use a different approach */
+.mondrian .logout-icon {
+  display: none;
+}
+
+/* Create our own logout icon with CSS */
+.mondrian .logout-button-settings::after {
+  content: "→";
+  position: absolute;
+  left: 19px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  color: white;
+  font-size: 1.8rem;
+  font-weight: bold;
+  z-index: 3;
 }
 
