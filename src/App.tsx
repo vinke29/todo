@@ -573,21 +573,24 @@ function App() {
   };
   
   const handleToggleSubtask = (todoId: number, subtaskId: number) => {
-    // Just update the subtask completion status, nothing else
-    setTodos(prevTodos => {
-      return prevTodos.map(todo => {
+    console.log(`Toggling subtask ${subtaskId} in todo ${todoId}`);
+    
+    setTodos(currentTodos => {
+      return currentTodos.map(todo => {
         if (todo.id === todoId) {
-          // Update the specific subtask
+          // Found the parent todo
           const updatedSubtasks = todo.subtasks.map(subtask => {
             if (subtask.id === subtaskId) {
-              const isCompleting = !subtask.completed;
+              // Toggle the completed status of this subtask
+              const newCompletedStatus = !subtask.completed;
+              
+              // If marking as completed, set completedDate and hidden=true
+              // If marking as not completed, remove completedDate and hidden=false
               return {
                 ...subtask,
-                completed: isCompleting,
-                completedDate: isCompleting ? new Date() : null,
-                hidden: isCompleting, // Set hidden to true when completing
-                // Always preserve the due date
-                dueDate: subtask.dueDate
+                completed: newCompletedStatus,
+                completedDate: newCompletedStatus ? new Date() : null,
+                hidden: newCompletedStatus // Set hidden based on completion status
               };
             }
             return subtask;
@@ -595,33 +598,39 @@ function App() {
           
           // Check if all subtasks are now completed
           const allSubtasksCompleted = updatedSubtasks.length > 0 && 
-            updatedSubtasks.every(subtask => subtask.completed);
+                                     updatedSubtasks.every(subtask => subtask.completed);
           
-          // If all subtasks are completed, mark the parent task as completed too
+          // If all subtasks are completed, mark the parent as completed too
           if (allSubtasksCompleted && !todo.completed) {
-            console.log(`All subtasks completed for todo ${todo.id}, marking parent as completed`);
-            
-            // Set the current date as both the task's completedDate and
-            // as the completedDate for any subtasks that don't have one
             const completionDate = new Date();
+            
+            // If todo is now auto-completed because all subtasks are completed,
+            // update Firestore if we have a logged-in user
+            if (currentUser && todo.firestoreId) {
+              const todoToUpdate = {
+                ...todo,
+                completed: true,
+                completedDate: completionDate,
+                subtasks: updatedSubtasks
+              };
+              updateTodo(currentUser.uid, todoToUpdate);
+            }
             
             return {
               ...todo,
-              subtasks: updatedSubtasks.map(subtask => {
-                // Ensure all subtasks have a completedDate
-                if (subtask.completed && !subtask.completedDate) {
-                  return {
-                    ...subtask,
-                    completedDate: completionDate,
-                    // Preserve the due date
-                    dueDate: subtask.dueDate
-                  };
-                }
-                return subtask;
-              }),
               completed: true,
-              completedDate: completionDate
+              completedDate: completionDate,
+              subtasks: updatedSubtasks
             };
+          }
+          
+          // Save this change to Firestore if we have a logged-in user
+          if (currentUser && todo.firestoreId) {
+            const todoToUpdate = {
+              ...todo,
+              subtasks: updatedSubtasks
+            };
+            updateTodo(currentUser.uid, todoToUpdate);
           }
           
           return {
@@ -971,8 +980,20 @@ function App() {
           console.log(`Removed ${userTodos.length - uniqueTodos.length} duplicate todos`);
         }
         
-        setTodos(uniqueTodos);
-        setPreviewTodos(uniqueTodos);
+        // Ensure all completed subtasks are marked as hidden
+        const processedTodos = uniqueTodos.map((todo: Todo) => {
+          return {
+            ...todo,
+            subtasks: todo.subtasks.map((subtask: Subtask) => ({
+              ...subtask,
+              // Explicitly set hidden to true for completed subtasks
+              hidden: subtask.completed ? true : !!subtask.hidden
+            }))
+          };
+        });
+        
+        setTodos(processedTodos);
+        setPreviewTodos(processedTodos);
         
         console.log("Fetching completed todos from Firestore...");
         // Load completed todos from Firestore
@@ -1034,37 +1055,34 @@ function App() {
 
   // Helper function to load from localStorage as fallback
   const loadFromLocalStorage = () => {
-    console.log("Falling back to localStorage for todos");
-    const savedTodos = localStorage.getItem('todos');
-    const savedCompletedTasks = localStorage.getItem('completedTasks');
-    
-    if (savedTodos) {
-      try {
-        const parsedTodos = JSON.parse(savedTodos, (key, value) => {
-          if (key === 'dueDate' && value) {
-            return new Date(value);
+    try {
+      const savedTodos = localStorage.getItem('todos');
+      const savedCompletedTasks = localStorage.getItem('completedTasks');
+      
+      if (savedTodos) {
+        const parsedTodos = JSON.parse(savedTodos);
+        
+        // Ensure all completed subtasks are marked as hidden
+        const todosWithProperHiddenState = parsedTodos.map((todo: Todo) => {
+          if (todo.subtasks && todo.subtasks.length > 0) {
+            todo.subtasks = todo.subtasks.map((subtask: Subtask) => {
+              if (subtask.completed) {
+                return { ...subtask, hidden: true };
+              }
+              return subtask;
+            });
           }
-          return value;
+          return todo;
         });
-        setTodos(parsedTodos);
-        setPreviewTodos(parsedTodos);
-      } catch (e) {
-        console.error('Error parsing todos from localStorage', e);
-      }
-    }
 
-    if (savedCompletedTasks) {
-      try {
-        const parsedCompletedTasks = JSON.parse(savedCompletedTasks, (key, value) => {
-          if ((key === 'dueDate' || key === 'completedDate') && value) {
-            return new Date(value);
-          }
-          return value;
-        });
-        setCompletedTasks(parsedCompletedTasks);
-      } catch (e) {
-        console.error('Error parsing completedTasks from localStorage', e);
+        setTodos(todosWithProperHiddenState);
       }
+      
+      if (savedCompletedTasks) {
+        setCompletedTasks(JSON.parse(savedCompletedTasks));
+      }
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
     }
   };
 
@@ -3267,18 +3285,18 @@ function App() {
                 // Find all active tasks with completed subtasks (including hidden ones)
                 const activeTasks = todos.filter(todo => !todo.completed);
                 const tasksWithCompletedSubtasks = activeTasks.filter(task => 
-                  task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
+                  task.subtasks.some(subtask => subtask.completed)
                 );
                 
                 if (tasksWithCompletedSubtasks.length > 0) {
                   return (
                     <div className="history-section">
-                      <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
+                      <h4 className="history-section-title">COMPLETED SUBTASKS IN ACTIVE TASKS</h4>
                       
                       {tasksWithCompletedSubtasks.map(task => {
-                        // Filter subtasks completed in the selected time period, include hidden ones
+                        // Filter completed subtasks in the selected time period, include hidden ones
                         const filteredCompletedSubtasks = task.subtasks.filter(subtask => {
-                          if (!subtask.completed || !subtask.completedDate) return false;
+                          if (!subtask.completed) return false;
                           
                           const filterDate = getFilterDate();
                           
@@ -3287,11 +3305,13 @@ function App() {
                             // Set end of day for end date to include the entire day
                             const endDate = new Date(customDateRange.end);
                             endDate.setHours(23, 59, 59, 999);
-                            return subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                            // Use completion date if available, otherwise don't filter by date
+                            return !subtask.completedDate || 
+                                  (subtask.completedDate >= filterDate && subtask.completedDate <= endDate);
                           }
                           
-                          // For preset ranges, just check if after filter date
-                          return subtask.completedDate >= filterDate;
+                          // For preset ranges, just check if after filter date or if no completion date
+                          return !subtask.completedDate || subtask.completedDate >= filterDate;
                         });
                         
                         if (filteredCompletedSubtasks.length === 0) return null;
