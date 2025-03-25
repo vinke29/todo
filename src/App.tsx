@@ -551,26 +551,56 @@ function App() {
   
   const handleToggleSubtask = (todoId: number, subtaskId: number) => {
     setTodos(prevTodos => {
-      return prevTodos.map(todo => {
+      const updatedTodos = prevTodos.map(todo => {
         if (todo.id === todoId) {
+          // Update the specific subtask
+          const updatedSubtasks = todo.subtasks.map(subtask => {
+            if (subtask.id === subtaskId) {
+              const isCompleting = !subtask.completed;
+              return {
+                ...subtask,
+                completed: isCompleting,
+                completedDate: isCompleting ? new Date() : null,
+                hidden: isCompleting // Set hidden to true when completing
+              };
+            }
+            return subtask;
+          });
+          
+          // Check if all subtasks are now completed
+          const allSubtasksCompleted = updatedSubtasks.length > 0 && 
+            updatedSubtasks.every(subtask => subtask.completed);
+          
+          // If all subtasks are completed, mark the parent task as completed too
+          if (allSubtasksCompleted && !todo.completed) {
+            console.log(`All subtasks completed for todo ${todo.id}, marking parent as completed`);
+            return {
+              ...todo,
+              subtasks: updatedSubtasks,
+              completed: true,
+              completedDate: new Date()
+            };
+          }
+          
           return {
             ...todo,
-            subtasks: todo.subtasks.map(subtask => {
-              if (subtask.id === subtaskId) {
-                const isCompleting = !subtask.completed;
-                return {
-                  ...subtask,
-                  completed: isCompleting,
-                  completedDate: isCompleting ? new Date() : null,
-                  hidden: isCompleting // Set hidden to true when completing
-                };
-              }
-              return subtask;
-            })
+            subtasks: updatedSubtasks
           };
         }
         return todo;
       });
+      
+      // Before returning the updated todos, check if the completed task should be moved to completedTasks
+      const completedTodo = updatedTodos.find(todo => todo.id === todoId && todo.completed);
+      if (completedTodo) {
+        // We'll move the task to completedTasks in a separate effect
+        setTimeout(() => {
+          setTodos(current => current.filter(t => t.id !== todoId));
+          setCompletedTasks(current => [completedTodo, ...current]);
+        }, 500); // Short delay to allow animation
+      }
+      
+      return updatedTodos;
     });
     
     // Force a re-render after a small delay to ensure state is updated
