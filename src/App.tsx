@@ -270,6 +270,8 @@ function App() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editSubtaskInputRef = useRef<HTMLInputElement>(null);
   const newSubtaskInputRef = useRef<HTMLInputElement>(null);
+  // Ref to track auto-completed tasks to prevent duplicates
+  const autoCompletedTaskRef = useRef<number | null>(null);
   
   // Add state for tracking which task has an open calendar
   const [calendarOpenForId, setCalendarOpenForId] = useState<number | null>(null);
@@ -418,44 +420,53 @@ function App() {
   const handleDrop = (e: React.DragEvent<HTMLElement>, dropTargetId?: number) => {
     e.preventDefault();
     
-    if (draggedTaskId === null) return;
+    // If no id is being dragged or it's the same as the drop target, do nothing
+    if (!draggedTaskId || draggedTaskId === dropTargetId) {
+      setIsDragging(false);
+      setDraggedTaskId(null);
+      setDragOverTaskId(null);
+      setIsDropEndZone(false);
+      return;
+    }
     
-    // Add to end of list
-    if (dropTargetId === undefined) {
-      const draggedTodo = todos.find(todo => todo.id === draggedTaskId);
-      if (!draggedTodo) return;
-      
+    // If we're dropping at the end
+    if (isDropEndZone) {
+      // Move the task to the end of the list
       setTodos(prevTodos => {
-        const filteredTodos = prevTodos.filter(todo => todo.id !== draggedTaskId);
-        return [...filteredTodos, draggedTodo];
+        // Remove the dragged task
+        const dragged = prevTodos.find(todo => todo.id === draggedTaskId);
+        const withoutDragged = prevTodos.filter(todo => todo.id !== draggedTaskId);
+        
+        // Add the dragged task to the end
+        return [...withoutDragged, dragged!];
       });
-      
-      handleDragEnd();
-      return;
+    } 
+    // If we're dropping on another task
+    else if (dropTargetId !== undefined) {
+      setTodos(prevTodos => {
+        // Remove the dragged task
+        const dragged = prevTodos.find(todo => todo.id === draggedTaskId);
+        if (!dragged) return prevTodos;
+        
+        const withoutDragged = prevTodos.filter(todo => todo.id !== draggedTaskId);
+        
+        // Find the index where to insert
+        const dropIndex = withoutDragged.findIndex(todo => todo.id === dropTargetId);
+        
+        // Insert the dragged task at that position
+        return [
+          ...withoutDragged.slice(0, dropIndex + 1),
+          dragged,
+          ...withoutDragged.slice(dropIndex + 1)
+        ];
+      });
     }
     
-    // If dropping onto itself, do nothing
-    if (draggedTaskId === dropTargetId) {
-      handleDragEnd();
-      return;
-    }
-    
-    setTodos(prevTodos => {
-      const draggedTodo = prevTodos.find(todo => todo.id === draggedTaskId);
-      if (!draggedTodo) return prevTodos;
-      
-      const newTodos = prevTodos.filter(todo => todo.id !== draggedTaskId);
-      
-      // Find the index of the drop target
-      const dropIndex = newTodos.findIndex(todo => todo.id === dropTargetId);
-      
-      // Insert the dragged todo at the new position
-      newTodos.splice(dropIndex, 0, draggedTodo);
-      
-      return newTodos;
-    });
-    
-    handleDragEnd();
+    // Reset drag state
+    setIsDragging(false);
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
+    setIsDropEndZone(false);
   };
 
   // Calendar toggling for tasks
@@ -550,8 +561,9 @@ function App() {
   };
   
   const handleToggleSubtask = (todoId: number, subtaskId: number) => {
+    // Just update the subtask completion status, nothing else
     setTodos(prevTodos => {
-      const updatedTodos = prevTodos.map(todo => {
+      return prevTodos.map(todo => {
         if (todo.id === todoId) {
           // Update the specific subtask
           const updatedSubtasks = todo.subtasks.map(subtask => {
@@ -589,25 +601,46 @@ function App() {
         }
         return todo;
       });
-      
-      // Before returning the updated todos, check if the completed task should be moved to completedTasks
-      const completedTodo = updatedTodos.find(todo => todo.id === todoId && todo.completed);
-      if (completedTodo) {
-        // We'll move the task to completedTasks in a separate effect
-        setTimeout(() => {
-          setTodos(current => current.filter(t => t.id !== todoId));
-          setCompletedTasks(current => [completedTodo, ...current]);
-        }, 500); // Short delay to allow animation
-      }
-      
-      return updatedTodos;
     });
-    
-    // Force a re-render after a small delay to ensure state is updated
-    setTimeout(() => {
-      setForceUpdate(prev => prev + 1);
-    }, 50);
   };
+  
+  // Add this new effect to watch for completed tasks and move them
+  useEffect(() => {
+    // Find tasks with all subtasks completed
+    const completedTasks = todos.filter(todo => 
+      todo.completed && 
+      todo.subtasks.length > 0 && 
+      todo.subtasks.every(subtask => subtask.completed)
+    );
+    
+    // Move each completed task to the completed tasks list with a delay for smooth animation
+    if (completedTasks.length > 0) {
+      // Use a timeout for visual transition - add a short delay
+      setTimeout(() => {
+        completedTasks.forEach(task => {
+          console.log(`Moving task ${task.id} to completed tasks because all subtasks are done`);
+          
+          // Remove from active todos
+          setTodos(current => current.filter(t => t.id !== task.id));
+          
+          // Add to completed tasks if not already there
+          setCompletedTasks(current => {
+            // Make sure it's not already in the completed tasks
+            if (!current.some(t => t.id === task.id)) {
+              return [task, ...current];
+            }
+            return current;
+          });
+          
+          // Update in Firestore if user is logged in
+          if (currentUser && task.firestoreId) {
+            moveTodoToCompleted(currentUser.uid, task)
+              .catch(err => console.error("Error moving auto-completed task to Firestore:", err));
+          }
+        });
+      }, 500); // Add a 500ms delay for a smooth visual transition
+    }
+  }, [todos, currentUser, moveTodoToCompleted]);
   
   const handleEditSubtaskSave = () => {
     if (!editingSubtaskId) return;
