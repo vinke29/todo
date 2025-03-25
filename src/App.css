@@ -1636,6 +1636,17 @@ button:disabled {
   }
 }
 
+@media (max-width: 480px) {
+  @keyframes slideIn {
+    from {
+      transform: translateX(100vw);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+}
+
 /* Mobile styles */
 @media (max-width: 480px) {
   .user-profile {
@@ -1655,6 +1666,33 @@ button:disabled {
     align-self: flex-end;
     padding: 4px 10px;
     font-size: 12px;
+  }
+}
+
+/* Adding responsive styling for details drawer on mobile */
+@media (max-width: 480px) {
+  .details-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-left: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  
+  .details-drawer-header {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  .details-content {
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
@@ -2614,5 +2652,32 @@ button:disabled {
   .delete-btn:hover, .delete-subtask-btn:hover {
     background-color: rgba(255, 77, 77, 0.1);
     transform: scale(1.1);
+  }
+}
+
+/* Adding responsive styling for history drawer on mobile */
+@media (max-width: 480px) {
+  .history-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-left: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  
+  .history-drawer-header {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  .history-content {
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
