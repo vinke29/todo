@@ -11,9 +11,18 @@ import { getTodos, getCompletedTodos, addTodo, updateTodo, deleteTodo, moveTodoT
 import NetworkStatus from './components/NetworkStatus';
 
 // Utility function to detect mobile devices
-const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-         (window.innerWidth <= 768);
+const isMobile = () => { 
+  // Check for touch capability (most reliable for emulators)
+  const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  // Check for typical mobile dimensions
+  const isMobileSize = window.innerWidth <= 768;
+  
+  // Check user agent (traditional method)
+  const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // If in a development environment and the dimensions are mobile-like, prioritize that for emulator testing
+  return hasTouchScreen || isMobileSize || isMobileUserAgent;
 };
 
 // Add new theme types
@@ -1990,7 +1999,7 @@ function App() {
       {/* Include the NetworkStatus component at the top */}
       <NetworkStatus onStatusChange={handleNetworkStatusChange} />
       
-      <div className={`App ${currentTheme}`}>
+      <div className={`App ${currentTheme || 'default'}`}>
         {currentTheme === 'vangogh' && (
           <>
             <div className="sky-layer"></div>
@@ -2190,9 +2199,9 @@ function App() {
                           >
                             +
                           </button>
-                          <button
+                          <button 
                             type="button"
-                            className="delete-btn"
+                            className="delete-btn" 
                             onClick={() => handleDeleteTodo(todo.id)}
                             aria-label="Delete task"
                           >
@@ -3570,6 +3579,24 @@ function App() {
                 <button className="coming-soon-close-btn" onClick={() => setShowComingSoonModal(false)}>Got it!</button>
               </div>
             </div>
+          </div>
+        )}
+        
+        {/* Debug component - will only show during development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div style={{ 
+            position: 'fixed', 
+            bottom: '10px', 
+            right: '10px', 
+            background: 'rgba(0,0,0,0.7)', 
+            color: 'white', 
+            padding: '5px', 
+            borderRadius: '5px',
+            fontSize: '10px',
+            zIndex: 9999,
+            display: "block"  // Hidden by default, change to 'block' to see detection status
+          }}>
+            Mobile: {isMobile() ? 'Yes' : 'No'}
           </div>
         )}
       </div>
