@@ -3480,8 +3480,8 @@ function App() {
                 />
               </div>
               <div className="details-field">
-                <label htmlFor="details-due-date">Due Date:</label>
-                <div className="details-due-date">
+                <label htmlFor="details-due-date-input">Due Date:</label>
+                <div id="details-due-date-input" className="details-due-date" role="group">
                   {editingDetails.dueDate ? (
                     <div className="details-date-display">
                       <span>{formatDate(editingDetails.dueDate)}</span>
