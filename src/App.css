@@ -1091,17 +1091,11 @@ button:disabled {
 .theme-section {
   margin-top: 0;
   padding-bottom: 1.5rem;
-  border-bottom: 1px dashed #ddd;
+  border-bottom: none; /* Removed the dashed border */
 }
 
 .theme-section::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 25%;
-  right: 25%;
-  height: 1px;
-  background-color: #999;
+  display: none; /* Hide the pseudo-element line */
 }
 
 .theme-section h4 {
@@ -1111,10 +1105,20 @@ button:disabled {
 .account-section {
   margin-top: 2rem; /* Increased from 1rem to 2rem for more separation */
   padding: 1.5rem 1.25rem; /* Slightly increased padding */
-  background-color: #f8f8f8;
+  background-color: transparent; /* Changed from #f8f8f8 to transparent */
   border-radius: 10px;
-  border: 1px solid #e0e0e0; /* Slightly darker border */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Subtle shadow for depth */
+  border: none; /* Removed the border */
+  box-shadow: none; /* Removed the shadow */
+}
+
+/* Mondrian-specific account section styling */
+.mondrian .account-section {
+  border-top: 3px solid black;
+  padding-top: 1.5rem;
+  background-color: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  margin-top: 1.5rem;
 }
 
 .theme-section h4, .account-section h4 {
@@ -1130,8 +1134,14 @@ button:disabled {
 .account-section h4 {
   margin: 0 1.5rem 1.25rem 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: none; /* Removed the light gray border */
   color: #555; /* Slightly darker for contrast */
+}
+
+/* Also update the Mondrian theme version if needed */
+.mondrian .account-section h4 {
+  border-bottom: none;
+  padding-bottom: 0.5rem;
 }
 
 .account-options {
@@ -1256,7 +1266,7 @@ button:disabled {
 
 .mondrian .settings-header {
   border-bottom: 3px solid black;
-  padding-left: 0.75rem; /* Added left padding for Mondrian theme as well */
+  padding-left: 0.75rem;
 }
 
 .mondrian .theme-option.active {
