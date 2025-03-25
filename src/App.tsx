@@ -576,7 +576,7 @@ function App() {
     console.log(`Toggling subtask ${subtaskId} in todo ${todoId}`);
     
     setTodos(currentTodos => {
-      return currentTodos.map(todo => {
+      const updatedTodos = currentTodos.map(todo => {
         if (todo.id === todoId) {
           // Found the parent todo
           const updatedSubtasks = todo.subtasks.map(subtask => {
@@ -640,6 +640,9 @@ function App() {
         }
         return todo;
       });
+      
+      // Return the updated todos state
+      return updatedTodos;
     });
   };
   
@@ -1064,15 +1067,14 @@ function App() {
         
         // Ensure all completed subtasks are marked as hidden
         const todosWithProperHiddenState = parsedTodos.map((todo: Todo) => {
-          if (todo.subtasks && todo.subtasks.length > 0) {
-            todo.subtasks = todo.subtasks.map((subtask: Subtask) => {
-              if (subtask.completed) {
-                return { ...subtask, hidden: true };
-              }
-              return subtask;
-            });
-          }
-          return todo;
+          return {
+            ...todo,
+            subtasks: todo.subtasks.map((subtask: Subtask) => ({
+              ...subtask,
+              // Explicitly set hidden to true for completed subtasks
+              hidden: subtask.completed ? true : !!subtask.hidden
+            }))
+          };
         });
 
         setTodos(todosWithProperHiddenState);
