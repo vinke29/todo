@@ -2715,7 +2715,7 @@ function App() {
         {isSettingsOpen && (
           <div className="settings-menu open">
             <div className="settings-header">
-              <h3>Settings</h3>
+              <h3>SETTINGS</h3>
               <button className="close-settings-btn" onClick={toggleSettings}>×</button>
             </div>
             <div className="settings-content">
