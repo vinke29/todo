@@ -1747,56 +1747,51 @@ button:disabled {
     box-shadow: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
-    border-left: none !important;
-    transform: none !important;
-    animation: none !important;
+    font-size: 16px !important; /* Prevent iOS zoom */
   }
   
   .details-drawer-header {
-    width: 100% !important;
-    box-sizing: border-box !important;
+    position: sticky;
+    top: 0;
+    padding: 12px 15px !important;
+    z-index: 10;
   }
   
   .details-content {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    padding-bottom: 100px !important; /* Space for fixed buttons */
-  }
-  
-  /* Make buttons fixed at the bottom on mobile */
-  .details-buttons {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    background-color: #f8f9fa !important;
     padding: 15px !important;
-    margin: 0 !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
-    z-index: 1001 !important; /* Higher than the drawer */
-    justify-content: space-around !important;
-    padding-bottom: calc(15px + env(safe-area-inset-bottom, 15px)) !important; /* Safe area for notch */
+    overflow-x: hidden;
   }
   
-  /* Adjust button styles for mobile */
+  .details-field input, 
+  .details-field textarea {
+    font-size: 16px !important; /* Prevent iOS zoom on input focus */
+    padding: 10px !important;
+  }
+  
+  .details-buttons {
+    position: sticky;
+    bottom: 0;
+    background-color: inherit;
+    padding: 10px 15px;
+    margin: 0;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+  }
+  
   .details-buttons button {
-    flex: 1 !important;
-    max-width: 45% !important;
-    font-size: 16px !important;
     padding: 12px 16px !important;
+    font-size: 16px !important;
+  }
+
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
   }
   
-  /* Dark mode specific adjustments */
-  .App-header .details-buttons {
-    background-color: #2c3e50 !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important;
-  }
-  
-  /* Mondrian theme adjustments */
-  .mondrian .details-buttons {
-    background-color: white !important;
-    border-top: 5px solid black !important;
+  .calendar-day {
+    aspect-ratio: 1/1;
+    width: 100%;
+    font-size: 14px;
   }
 }
 
