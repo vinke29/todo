@@ -516,13 +516,25 @@ function App() {
       });
     });
     
+    // Find the parent task to check if it has a due date
+    const parentTask = todos.find(todo => todo.id === todoId);
+    
+    // Create a proper date object from the parent's due date if it exists
+    const parentDueDate = parentTask?.dueDate ? new Date(parentTask.dueDate.getTime()) : null;
+    
     const newSubtask: Subtask = {
       id: maxSubtaskId + 1,
       text: newSubtaskText,
       completed: false,
-      dueDate: null,
+      // Inherit the due date from the parent task if it exists (as a new Date object)
+      dueDate: parentDueDate,
       completedDate: null
     };
+    
+    // Log to verify the date is correctly assigned
+    if (parentDueDate) {
+      console.log(`Setting subtask due date to parent's due date: ${parentDueDate.toLocaleDateString()}`);
+    }
     
     setTodos(prevTodos => 
       prevTodos.map(todo => {
@@ -573,7 +585,9 @@ function App() {
                 ...subtask,
                 completed: isCompleting,
                 completedDate: isCompleting ? new Date() : null,
-                hidden: isCompleting // Set hidden to true when completing
+                hidden: isCompleting, // Set hidden to true when completing
+                // Always preserve the due date
+                dueDate: subtask.dueDate
               };
             }
             return subtask;
@@ -598,7 +612,9 @@ function App() {
                 if (subtask.completed && !subtask.completedDate) {
                   return {
                     ...subtask,
-                    completedDate: completionDate
+                    completedDate: completionDate,
+                    // Preserve the due date
+                    dueDate: subtask.dueDate
                   };
                 }
                 return subtask;
@@ -639,14 +655,20 @@ function App() {
           const updatedTask = {
             ...task,
             subtasks: task.subtasks.map(subtask => {
+              // Clone the subtask to avoid reference issues
+              const updatedSubtask = { ...subtask };
+              
               // If subtask is completed but doesn't have a completedDate, add one
               if (subtask.completed && !subtask.completedDate) {
-                return {
-                  ...subtask,
-                  completedDate: task.completedDate || new Date() // Use parent's completion date or now
-                };
+                updatedSubtask.completedDate = task.completedDate || new Date(); // Use parent's completion date or now
               }
-              return subtask;
+              
+              // Ensure due date is preserved
+              if (subtask.dueDate) {
+                updatedSubtask.dueDate = subtask.dueDate;
+              }
+              
+              return updatedSubtask;
             })
           };
           
@@ -1353,14 +1375,18 @@ function App() {
               ...subtask,
               completed: true,
               completedDate: completionDate, // Use the same completion date as the parent
-              hidden: true
+              hidden: true,
+              // Make sure to preserve the due date
+              dueDate: subtask.dueDate
             };
           }
           // If subtask is already completed but doesn't have a completion date, add one
           else if (subtask.completed && !subtask.completedDate) {
             return {
               ...subtask,
-              completedDate: completionDate // Use the same completion date as the parent
+              completedDate: completionDate, // Use the same completion date as the parent
+              // Make sure to preserve the due date
+              dueDate: subtask.dueDate
             };
           }
           // Otherwise leave it as is
@@ -3197,6 +3223,7 @@ function App() {
                                           <span role="img" aria-label="completed">✓</span> {formatDate(subtask.completedDate || task.completedDate)}
                                         </span>
                                         
+                                        {/* Always display the due date if it exists */}
                                         {subtask.dueDate && (
                                           <span className="history-subtask-due-date">
                                             <span role="img" aria-label="due">📅</span> {formatDate(subtask.dueDate)}
