@@ -6,14 +6,15 @@ This document outlines the process used to rotate the Firebase API key in this a
 
 ### Actions Taken - August 2023 (Initial Rotation)
 
-1. **Rotated the Firebase API Key**
-   - Old API key: `AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U` (was mistakenly marked as disabled)
-   - New API key: `AIzaSyCDHotsPi8bfdpiZPFWSljQcYf0c1niO7M` (now disabled)
+1. **API Key Issue Identified**
+   - Original API key: `AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U` (currently active and in use)
+   - Temporary API key: `AIzaSyCDHotsPi8bfdpiZPFWSljQcYf0c1niO7M` (now disabled due to security concerns)
 
 ### Actions Taken - October 2023 (Security Fix)
 
 1. **Addressed API Key Leak**
-   - Reverted to the original API key: `AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U`
+   - Returned to using the original API key: `AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U`
+   - Disabled the leaked API key: `AIzaSyCDHotsPi8bfdpiZPFWSljQcYf0c1niO7M`
    - Updated `.env` file to use the correct key
    - Created proper `.env.example` file with placeholder values
    - Ensured build process uses the environment variables
@@ -23,6 +24,7 @@ This document outlines the process used to rotate the Firebase API key in this a
    - Fixed build process to properly use environment variables
    - Added documentation about API key rotation
    - Deployed updated code to GitHub Pages
+   - Created future refactoring plan (see `FUTURE_REFACTORING.md`)
 
 ### Best Practices for API Key Management
 
@@ -51,9 +53,9 @@ This document outlines the process used to rotate the Firebase API key in this a
    - Implement rate limiting if available
    - React quickly to security notifications
 
-## Implementation
+## Current Implementation
 
-The current implementation uses environment variables to manage API keys:
+The current implementation uses hardcoded values but will be refactored to use environment variables:
 
 ```javascript
 import { initializeApp } from "firebase/app";
@@ -75,7 +77,9 @@ export const app = initializeApp(firebaseConfig);
 console.log("Firebase initialized successfully");
 ```
 
-For improved security, modify `src/firebase.ts` to use environment variables:
+## Planned Implementation
+
+For improved security, we will modify `src/firebase.ts` to use environment variables as outlined in the `FUTURE_REFACTORING.md` document:
 
 ```javascript
 import { initializeApp } from "firebase/app";
@@ -102,4 +106,14 @@ console.log("Initializing Firebase with config:",
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-``` 
+```
+
+## Next Steps
+
+See the detailed refactoring plan in `FUTURE_REFACTORING.md` for a complete approach to securely managing API keys in this application. The plan includes:
+
+1. Environment variable setup
+2. Firebase configuration refactoring
+3. Environment variable validation
+4. Testing procedures
+5. API key rotation schedule 
