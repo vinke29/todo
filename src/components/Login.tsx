@@ -117,78 +117,79 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h2>{isRegistering ? 'Create Account' : 'Login'}</h2>
-        
-        {error && <div className="error-message">{error}</div>}
-        {diagnosticInfo && <div className="diagnostic-info">{diagnosticInfo}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+    <div className="mondrian-login-container">
+      <div className="mondrian-art">
+        {/* Mondrian art composition will be added via CSS */}
+      </div>
+      
+      <div className="login-form-wrapper">
+        <div className="login-card minimalistic">
+          <h2>{isRegistering ? 'Create Account' : 'Login'}</h2>
+          
+          {error && <div className="error-message">{error}</div>}
+          {diagnosticInfo && <div className="diagnostic-info">{diagnosticInfo}</div>}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="login-button"
+              disabled={loading}
+            >
+              {loading 
+                ? 'Processing...' 
+                : isRegistering 
+                  ? 'Create Account' 
+                  : 'Login'
+              }
+            </button>
+          </form>
+
+          <div className="auth-toggle">
+            {isRegistering ? (
+              <p>
+                Already have an account?{' '}
+                <button 
+                  className="toggle-button" 
+                  onClick={() => setIsRegistering(false)}
+                >
+                  Login
+                </button>
+              </p>
+            ) : (
+              <p>
+                Don't have an account?{' '}
+                <button 
+                  className="toggle-button" 
+                  onClick={() => setIsRegistering(true)}
+                >
+                  Register
+                </button>
+              </p>
+            )}
           </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            className="login-button"
-            disabled={loading}
-          >
-            {loading 
-              ? 'Processing...' 
-              : isRegistering 
-                ? 'Create Account' 
-                : 'Login'
-            }
-          </button>
-        </form>
-
-        <div className="auth-toggle">
-          {isRegistering ? (
-            <p>
-              Already have an account?{' '}
-              <button 
-                className="toggle-button" 
-                onClick={() => setIsRegistering(false)}
-              >
-                Login
-              </button>
-            </p>
-          ) : (
-            <p>
-              Don't have an account?{' '}
-              <button 
-                className="toggle-button" 
-                onClick={() => setIsRegistering(true)}
-              >
-                Register
-              </button>
-            </p>
-          )}
-        </div>
-        
-        {/* Test account info - REMOVE IN PRODUCTION */}
-        <div className="test-account-info">
-          <p><small>For testing, you can use: test@example.com / testpassword</small></p>
         </div>
       </div>
     </div>

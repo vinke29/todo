@@ -1,111 +1,277 @@
+/* Base login styles */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   padding: 20px;
-  background-color: #f5f5f5;
 }
 
-.login-card {
+/* Mondrian Login Styles */
+.mondrian-login-container {
+  display: flex;
+  min-height: 100vh;
   width: 100%;
-  max-width: 400px;
+  background-color: white;
+}
+
+/* Mondrian Art Section - Takes half the screen */
+.mondrian-art {
+  flex: 1;
+  background-color: white;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  /* Mondrian composition with CSS grid */
+  display: grid;
+  grid-template-columns: 60% 5% 35%;
+  grid-template-rows: 35% 5% 20% 5% 35%;
+  grid-template-areas:
+    "red_top white_top1 white_top2"
+    "black_h1 black_cross black_h2"
+    "white_mid blue_mid blue_mid"
+    "black_h3 black_h3 black_h3"
+    "white_bot1 black_v yellow_bot";
+  border-right: 8px solid black;
+}
+
+/* Mondrian Color Blocks */
+.mondrian-art::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  background-image:
+    /* Red block - top left */
+    linear-gradient(to right, #D42C2C 0%, #D42C2C 60%, transparent 60%, transparent 100%),
+    /* Blue block - middle right */
+    linear-gradient(to right, transparent 0%, transparent 65%, #225E9A 65%, #225E9A 100%),
+    /* Yellow block - bottom right */
+    linear-gradient(to right, transparent 0%, transparent 65%, #F7D842 65%, #F7D842 100%);
+  background-position:
+    0 0,
+    0 40%,
+    0 65%;
+  background-size:
+    100% 35%,
+    100% 25%,
+    100% 35%;
+  background-repeat: no-repeat;
+}
+
+/* Mondrian Black Lines - Vertical */
+.mondrian-art::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  background-image:
+    /* Vertical line 1 - main divider at 60% */
+    linear-gradient(to right, transparent 60%, black 60%, black 65%, transparent 65%),
+    /* Horizontal line 1 - at 35% */
+    linear-gradient(to bottom, transparent 35%, black 35%, black 40%, transparent 40%),
+    /* Horizontal line 2 - at 60% */
+    linear-gradient(to bottom, transparent 60%, black 60%, black 65%, transparent 65%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Login Form Section */
+.login-form-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 40px;
   background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.login-card h2 {
+/* New Minimalistic Card Style */
+.login-card.minimalistic {
+  width: 100%;
+  max-width: 360px;
+  padding: 40px;
+  background-color: white;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.login-card.minimalistic h2 {
   margin-top: 0;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
   text-align: center;
-  font-size: 24px;
-  color: #333;
+  font-size: 28px;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: 1px;
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.login-card.minimalistic h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 40%;
+  right: 40%;
+  height: 3px;
+  background-color: #D42C2C; /* Mondrian red */
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
-  color: #555;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 14px;
+  border: 2px solid #000;
   font-size: 16px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: 0;
+  background-color: white;
 }
 
 .form-group input:focus {
-  border-color: #61dafb;
+  border-color: #225E9A; /* Mondrian blue */
   outline: none;
-  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.2);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
 }
 
 .login-button {
   width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  background-color: #61dafb;
-  color: #222;
+  padding: 14px;
+  margin-top: 15px;
+  background-color: #D42C2C; /* Mondrian red */
+  color: white;
   font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
+  font-weight: 700;
+  border: 2px solid #000;
+  border-radius: 0;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: background-color 0.2s, transform 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .login-button:hover {
-  background-color: #4db8d5;
-  transform: translateY(-2px);
+  background-color: #B71C1C; /* Darker red */
+  transform: translateY(-3px);
+  box-shadow: 4px 4px 0 black;
 }
 
 .login-button:active {
   transform: translateY(0);
+  box-shadow: 2px 2px 0 black;
 }
 
 .login-button:disabled {
   background-color: #cccccc;
+  border-color: #999;
+  color: #666;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .auth-toggle {
-  margin-top: 24px;
+  margin-top: 30px;
   text-align: center;
-  color: #666;
+  color: #333;
+  font-size: 14px;
 }
 
 .toggle-button {
   background: none;
   border: none;
-  color: #61dafb;
+  color: #225E9A; /* Mondrian blue */
   padding: 0;
   font-size: inherit;
-  text-decoration: underline;
+  font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
+  border-bottom: 2px solid #225E9A;
+  transition: color 0.2s;
 }
 
 .toggle-button:hover {
-  color: #4db8d5;
+  color: #1A4A7C; /* Darker blue */
 }
 
 .error-message {
-  padding: 10px;
+  padding: 12px;
   margin-bottom: 20px;
-  background-color: rgba(231, 76, 60, 0.1);
-  border-left: 4px solid #e74c3c;
-  color: #e74c3c;
-  border-radius: 4px;
+  background-color: rgba(212, 44, 44, 0.1);
+  border-left: 4px solid #D42C2C;
+  color: #D42C2C;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.diagnostic-info {
+  padding: 12px;
+  margin-bottom: 20px;
+  background-color: rgba(34, 94, 154, 0.1);
+  border-left: 4px solid #225E9A;
+  color: #225E9A;
+  font-size: 14px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .mondrian-login-container {
+    flex-direction: column;
+  }
+  
+  .mondrian-art {
+    min-height: 40vh;
+    border-right: none;
+    border-bottom: 8px solid black;
+  }
+  
+  .login-form-wrapper {
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mondrian-art {
+    min-height: 30vh;
+  }
+  
+  .login-card.minimalistic {
+    padding: 25px 15px;
+  }
+  
+  .login-card.minimalistic h2 {
+    font-size: 24px;
+  }
+  
+  .form-group input {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .login-button {
+    padding: 12px;
+    font-size: 14px;
+  }
 }
 
 /* Dark mode styles */
@@ -232,25 +398,4 @@
   border-right: 2px solid black;
   border-bottom: 2px solid black;
   font-weight: 600;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 25px;
-  }
-  
-  .login-card h2 {
-    font-size: 22px;
-  }
-  
-  .form-group input {
-    padding: 10px;
-    font-size: 14px;
-  }
-  
-  .login-button {
-    padding: 10px;
-    font-size: 14px;
-  }
 } 
