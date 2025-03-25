@@ -2713,10 +2713,10 @@ function App() {
         
         {/* Settings Menu */}
         {isSettingsOpen && (
-          <div className="settings-menu">
+          <div className="settings-menu open">
             <div className="settings-header">
               <h3>Settings</h3>
-              <button className="close-btn" onClick={toggleSettings}>×</button>
+              <button className="close-settings-btn" onClick={toggleSettings}>×</button>
             </div>
             <div className="settings-content">
               <div className="theme-section">

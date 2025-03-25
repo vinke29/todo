@@ -9,6 +9,9 @@ const checkFirebaseAuth = () => {
     console.log("Auth domain:", auth.app.options.authDomain);
     console.log("API key:", auth.app.options.apiKey);
     console.log("Project ID:", auth.app.options.projectId);
+    console.log("Storage bucket:", auth.app.options.storageBucket);
+    console.log("App ID:", auth.app.options.appId);
+    console.log("Measurement ID:", auth.app.options.measurementId);
     return true;
   } catch (err) {
     console.error("Error checking Firebase auth:", err);
@@ -45,6 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Log authentication attempt for debugging
       console.log(`Attempting to ${isRegistering ? 'register' : 'sign in'} with email: ${email}`);
       console.log("Auth instance:", auth);
+      console.log("Full Firebase config:", auth.app.options);
       
       // Hardcoded test credentials for fallback - REMOVE IN PRODUCTION
       const testEmail = "test@example.com";

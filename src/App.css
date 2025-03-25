@@ -1051,36 +1051,71 @@ button:disabled {
 
 /* Settings Menu */
 .settings-menu {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  z-index: 1000;
-  width: 460px !important; /* Slightly wider to accommodate the cards */
-  min-width: 400px !important;
-  max-width: 90vw; /* Still maintain responsiveness for small screens */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  color: #333;
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 380px !important;
+  height: 100% !important;
+  background-color: #f8f9fa !important;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1) !important;
+  z-index: 1000 !important;
+  transform: translateX(100%) !important;
+  transition: transform 0.3s ease !important;
+  animation: none !important;
+  border: none !important;
+  border-left: 5px solid black !important;
+  overflow-y: auto !important;
+}
+
+.settings-menu.open {
+  transform: translateX(0) !important;
 }
 
 .settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  padding-left: 0.75rem; /* Added left padding for the Settings text */
-  border-bottom: 1px solid #eee;
+  padding: 20px;
+  background-color: #2d5ba9;
+  color: white;
+  font-weight: bold;
+}
+
+.close-settings-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+  padding: 0;
+}
+
+.close-settings-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.App-header .close-settings-btn {
+  color: #333;
+  border-color: #333;
+}
+
+.App-header .close-settings-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .settings-content {
-  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
   overflow-y: auto;
-  padding: 0 0.5rem;
-  padding-top: 0; /* Remove top padding */
+  height: calc(100% - 60px);
+  flex-grow: 1;
 }
 
 .theme-section, .account-section {
@@ -1103,12 +1138,10 @@ button:disabled {
 }
 
 .account-section {
-  margin-top: 2rem; /* Increased from 1rem to 2rem for more separation */
-  padding: 1.5rem 1.25rem; /* Slightly increased padding */
-  background-color: transparent; /* Changed from #f8f8f8 to transparent */
-  border-radius: 10px;
-  border: none; /* Removed the border */
-  box-shadow: none; /* Removed the shadow */
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  /* Remove order styling */
 }
 
 /* Mondrian-specific account section styling */
@@ -1193,22 +1226,42 @@ button:disabled {
 .theme-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
-  margin-top: 0.5rem; /* Reduced space after heading */
+  gap: 15px;
+  margin-top: 15px;
+  margin-bottom: 20px;
 }
 
 .theme-option {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  position: relative;
-  text-align: center;
+  background-color: #fff;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.theme-preview {
+  width: 100%;
+  height: 80px; /* Reduced from 100px */
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+}
+
+.theme-option span {
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  display: block;
+  margin-top: 5px;
+  color: #333;
 }
 
 .theme-option:hover {
@@ -1220,27 +1273,6 @@ button:disabled {
   border-color: #61dafb;
   background-color: rgba(97, 218, 251, 0.05);
   box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.2);
-}
-
-.theme-preview {
-  height: 120px;
-  overflow: hidden;
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  flex-grow: 1;
-  position: relative;
-}
-
-.theme-option span {
-  display: block;
-  padding: 14px 8px; /* Increased top padding from 12px to 14px */
-  font-size: 1rem;
-  font-weight: 500;
-  background-color: white;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-  position: relative;
-  z-index: 5; /* Ensure the theme name is above the badge */
 }
 
 .coming-soon-badge {
@@ -1261,12 +1293,36 @@ button:disabled {
 
 /* Mondrian theme styles for settings */
 .mondrian .settings-menu {
-  border: 3px solid black;
+  background-color: white !important;
+  border-left: 5px solid black !important;
+  box-shadow: -5px 0 0 rgba(0, 0, 0, 0.8) !important;
+  color: black !important;
 }
 
 .mondrian .settings-header {
+  background-color: #2d5ba9;
+  color: white;
   border-bottom: 3px solid black;
-  padding-left: 0.75rem;
+  font-weight: bold;
+  padding: 18px 20px !important;
+}
+
+.mondrian .close-settings-btn {
+  border: 1px solid white;
+  color: white;
+}
+
+.mondrian .close-settings-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.mondrian .theme-section h4, 
+.mondrian .account-section h4 {
+  color: black;
+  border-bottom: 2px solid black;
+  font-weight: bold;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
 }
 
 .mondrian .theme-option.active {
@@ -1399,16 +1455,28 @@ button:disabled {
 /* Mobile responsive adjustments */
 @media (max-width: 480px) {
   .settings-menu {
-    width: 90% !important;
-    min-width: 280px !important;
-    left: 5%;
-    right: 5%;
-    bottom: 70px;
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    animation: none !important;
+    z-index: 1000 !important;
+    height: 100% !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    position: fixed !important;
+    border: none !important;
+    border-left: 5px solid black !important;
   }
   
   .theme-options {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
   }
 }
 
