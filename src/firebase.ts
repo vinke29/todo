@@ -7,10 +7,10 @@ const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "to-do-art-e98c4.firebaseapp.com",
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "to-do-art-e98c4",
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "to-do-art-e98c4.appspot.com",
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "to-do-art-e98c4.firebasestorage.app",
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "156255459350",
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:156255459350:web:50911575d9ffa69aa33d37",
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-069YCC3RG6"
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:156255459350:web:31abaa69850901ada33d37",
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-YSV8VSNV3L"
 };
 
 // Add this variable to track connection status
