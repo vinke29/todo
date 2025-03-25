@@ -586,11 +586,25 @@ function App() {
           // If all subtasks are completed, mark the parent task as completed too
           if (allSubtasksCompleted && !todo.completed) {
             console.log(`All subtasks completed for todo ${todo.id}, marking parent as completed`);
+            
+            // Set the current date as both the task's completedDate and
+            // as the completedDate for any subtasks that don't have one
+            const completionDate = new Date();
+            
             return {
               ...todo,
-              subtasks: updatedSubtasks,
+              subtasks: updatedSubtasks.map(subtask => {
+                // Ensure all subtasks have a completedDate
+                if (subtask.completed && !subtask.completedDate) {
+                  return {
+                    ...subtask,
+                    completedDate: completionDate
+                  };
+                }
+                return subtask;
+              }),
               completed: true,
-              completedDate: new Date()
+              completedDate: completionDate
             };
           }
           
@@ -620,6 +634,22 @@ function App() {
         completedTasks.forEach(task => {
           console.log(`Moving task ${task.id} to completed tasks because all subtasks are done`);
           
+          // First ensure all subtasks have completion dates
+          // This is necessary for subtasks that were auto-completed when the parent task was completed
+          const updatedTask = {
+            ...task,
+            subtasks: task.subtasks.map(subtask => {
+              // If subtask is completed but doesn't have a completedDate, add one
+              if (subtask.completed && !subtask.completedDate) {
+                return {
+                  ...subtask,
+                  completedDate: task.completedDate || new Date() // Use parent's completion date or now
+                };
+              }
+              return subtask;
+            })
+          };
+          
           // Remove from active todos
           setTodos(current => current.filter(t => t.id !== task.id));
           
@@ -627,14 +657,14 @@ function App() {
           setCompletedTasks(current => {
             // Make sure it's not already in the completed tasks
             if (!current.some(t => t.id === task.id)) {
-              return [task, ...current];
+              return [updatedTask, ...current];
             }
             return current;
           });
           
           // Update in Firestore if user is logged in
           if (currentUser && task.firestoreId) {
-            moveTodoToCompleted(currentUser.uid, task)
+            moveTodoToCompleted(currentUser.uid, updatedTask)
               .catch(err => console.error("Error moving auto-completed task to Firestore:", err));
           }
         });
@@ -717,9 +747,22 @@ function App() {
     setTodos(prevTodos => 
       prevTodos.map(todo => {
         if (todo.id === taskId) {
+          // Propagate due date to subtasks that don't have their own due date
+          const updatedSubtasks = todo.subtasks.map(subtask => {
+            // Only update subtasks that don't have a due date
+            if (!subtask.dueDate) {
+              return {
+                ...subtask,
+                dueDate: new Date(date.getTime()) // Clone date to avoid reference issues
+              };
+            }
+            return subtask;
+          });
+          
           return {
             ...todo,
-            dueDate: date
+            dueDate: date,
+            subtasks: updatedSubtasks
           };
         }
         return todo;
@@ -1294,11 +1337,35 @@ function App() {
     if (!todoToToggle) return;
     
     if (!todoToToggle.completed) {
-      // Mark as completed
+      // Current date to use for all completion timestamps
+      const completionDate = new Date();
+      
+      // Mark as completed and ensure all subtasks are completed with dates
       const updatedTodo = {
         ...todoToToggle,
         completed: true,
-        completedDate: new Date()
+        completedDate: completionDate,
+        // Update all subtasks to be completed with the same date if not already completed
+        subtasks: todoToToggle.subtasks.map(subtask => {
+          // If subtask is not completed, mark it as completed
+          if (!subtask.completed) {
+            return {
+              ...subtask,
+              completed: true,
+              completedDate: completionDate, // Use the same completion date as the parent
+              hidden: true
+            };
+          }
+          // If subtask is already completed but doesn't have a completion date, add one
+          else if (subtask.completed && !subtask.completedDate) {
+            return {
+              ...subtask,
+              completedDate: completionDate // Use the same completion date as the parent
+            };
+          }
+          // Otherwise leave it as is
+          return subtask;
+        })
       };
       
       // Remove from active todos and add to completed
@@ -1608,8 +1675,15 @@ function App() {
           if (todo.id === editingDetails.id) {
             // Create new subtasks with adjusted dates if needed
             const updatedSubtasks = todo.subtasks.map(subtask => {
+              // If the subtask already has a date later than the new parent date,
+              // keep it below the parent's due date
               if (editingDetails.dueDate && subtask.dueDate && subtask.dueDate > editingDetails.dueDate) {
                 // Clone the date to avoid reference issues
+                return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
+              }
+              // If the subtask doesn't have a due date and the parent task now has one,
+              // propagate the due date to the subtask
+              else if (editingDetails.dueDate && !subtask.dueDate) {
                 return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
               }
               return subtask;
@@ -1637,8 +1711,15 @@ function App() {
             if (todo.id === editingDetails.id) {
               // Create new subtasks with adjusted dates if needed
               const updatedSubtasks = todo.subtasks.map(subtask => {
+                // If the subtask already has a date later than the new parent date,
+                // keep it below the parent's due date
                 if (editingDetails.dueDate && subtask.dueDate && subtask.dueDate > editingDetails.dueDate) {
                   // Clone the date to avoid reference issues
+                  return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
+                }
+                // If the subtask doesn't have a due date and the parent task now has one,
+                // propagate the due date to the subtask
+                else if (editingDetails.dueDate && !subtask.dueDate) {
                   return { ...subtask, dueDate: new Date(editingDetails.dueDate.getTime()) };
                 }
                 return subtask;
@@ -3069,17 +3150,20 @@ function App() {
                                 <div className="history-date-container">
                                   {task.completedDate && (
                                     <span className="history-done-date">
-                                      Done: {formatDate(task.completedDate)}
+                                      <span role="img" aria-label="completed">✓</span> {formatDate(task.completedDate)}
                                     </span>
                                   )}
                                   {task.dueDate && (
                                     <span className="history-due-date">
-                                      Due: {formatDate(task.dueDate)}
+                                      <span role="img" aria-label="due">📅</span> {formatDate(task.dueDate)}
                                     </span>
                                   )}
                                   {task.completedDate && task.dueDate && (
                                     <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
-                                      {getCompletionStatus(task.completedDate, task.dueDate).label}
+                                      {getCompletionStatus(task.completedDate, task.dueDate).status === 'late' ? 
+                                        <span role="img" aria-label="late">⚠️</span> : 
+                                        <span role="img" aria-label="on-time">👍</span>
+                                      } {getCompletionStatus(task.completedDate, task.dueDate).label}
                                     </span>
                                   )}
                                 </div>
@@ -3108,19 +3192,33 @@ function App() {
                                         title="Click to view details"
                                       >{subtask.text}</span>
                                       <div className="history-subtask-dates">
-                                        {subtask.completedDate && (
-                                          <span className="history-subtask-done-date">
-                                            Done: {formatDate(subtask.completedDate)}
-                                          </span>
-                                        )}
+                                        {/* Display the completion date - either the subtask's own date or inherit from parent */}
+                                        <span className="history-subtask-done-date">
+                                          <span role="img" aria-label="completed">✓</span> {formatDate(subtask.completedDate || task.completedDate)}
+                                        </span>
+                                        
                                         {subtask.dueDate && (
                                           <span className="history-subtask-due-date">
-                                            Due: {formatDate(subtask.dueDate)}
+                                            <span role="img" aria-label="due">📅</span> {formatDate(subtask.dueDate)}
                                           </span>
                                         )}
-                                        {subtask.completedDate && subtask.dueDate && (
-                                          <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
-                                            {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
+                                        
+                                        {/* Show completion status if subtask has a due date */}
+                                        {subtask.dueDate && (
+                                          <span className={`completion-status ${getCompletionStatus(
+                                            subtask.completedDate || task.completedDate || new Date(), // Use parent's date as fallback
+                                            subtask.dueDate
+                                          ).status}`}>
+                                            {getCompletionStatus(
+                                              subtask.completedDate || task.completedDate || new Date(), 
+                                              subtask.dueDate
+                                            ).status === 'late' ? 
+                                              <span role="img" aria-label="late">⚠️</span> : 
+                                              <span role="img" aria-label="on-time">👍</span>
+                                            } {getCompletionStatus(
+                                              subtask.completedDate || task.completedDate || new Date(), 
+                                              subtask.dueDate
+                                            ).label}
                                           </span>
                                         )}
                                       </div>
@@ -3204,17 +3302,20 @@ function App() {
                                     <div className="history-subtask-dates">
                                       {subtask.completedDate && (
                                         <span className="history-subtask-done-date">
-                                          Done: {formatDate(subtask.completedDate)}
+                                          <span role="img" aria-label="completed">✓</span> {formatDate(subtask.completedDate)}
                                         </span>
                                       )}
                                       {subtask.dueDate && (
                                         <span className="history-subtask-due-date">
-                                          Due: {formatDate(subtask.dueDate)}
+                                          <span role="img" aria-label="due">📅</span> {formatDate(subtask.dueDate)}
                                         </span>
                                       )}
                                       {subtask.completedDate && subtask.dueDate && (
                                         <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
-                                          {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
+                                          {getCompletionStatus(subtask.completedDate, subtask.dueDate).status === 'late' ? 
+                                            <span role="img" aria-label="late">⚠️</span> : 
+                                            <span role="img" aria-label="on-time">👍</span>
+                                          } {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
                                         </span>
                                       )}
                                     </div>

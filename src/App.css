@@ -2285,7 +2285,7 @@ button:disabled {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .history-task-text {
@@ -2298,33 +2298,33 @@ button:disabled {
 .history-date-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  margin-top: 4px;
 }
 
-.history-done-date, .history-due-date {
+.history-done-date, .history-due-date,
+.history-subtask-done-date, .history-subtask-due-date {
   font-size: 0.85rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.04);
-  color: #555;
+  padding: 3px 8px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
 }
 
-.history-done-date {
+.history-done-date, .history-subtask-done-date {
+  background-color: rgba(46, 125, 50, 0.1);
   color: #2e7d32;
 }
 
-.history-due-date {
+.history-due-date, .history-subtask-due-date {
+  background-color: rgba(2, 119, 189, 0.1);
   color: #0277bd;
 }
 
 .completion-status {
   font-size: 0.85rem;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
   font-weight: 500;
 }
 
@@ -2350,9 +2350,10 @@ button:disabled {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 12px;
   border-radius: 6px;
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: #f9f9f9;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .history-subtask-content {
@@ -2364,30 +2365,15 @@ button:disabled {
 
 .history-subtask-text {
   font-size: 0.95rem;
-  color: #444;
+  color: #333;
   word-break: break-word;
 }
 
 .history-subtask-dates {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-}
-
-.history-subtask-done-date, .history-subtask-due-date {
-  font-size: 0.8rem;
-  padding: 3px 6px;
-  border-radius: 3px;
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.history-subtask-done-date {
-  color: #2e7d32;
-}
-
-.history-subtask-due-date {
-  color: #0277bd;
 }
 
 /* Dark mode styles for history items */
@@ -2396,7 +2382,8 @@ button:disabled {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-.App-header .history-task-text {
+.App-header .history-task-text,
+.App-header .history-subtask-text {
   color: #ecf0f1;
 }
 
@@ -2404,7 +2391,7 @@ button:disabled {
 .App-header .history-due-date,
 .App-header .history-subtask-done-date,
 .App-header .history-subtask-due-date {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .App-header .history-done-date,
@@ -2428,16 +2415,13 @@ button:disabled {
 }
 
 .App-header .history-subtask-item {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.App-header .history-subtask-text {
-  color: #bdc3c7;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Mondrian theme styling for history items */
 .mondrian .history-item {
-  border: 3px solid black;
+  border: 2px solid black;
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
   border-radius: 0;
   padding: 16px;
@@ -2449,38 +2433,40 @@ button:disabled {
   box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
 }
 
-.mondrian .history-done-date {
+.mondrian .history-done-date,
+.mondrian .history-subtask-done-date {
   background-color: #4CAF50;
   color: white;
-  border: 2px solid black;
+  border: 1px solid black;
   border-radius: 0;
 }
 
-.mondrian .history-due-date {
+.mondrian .history-due-date,
+.mondrian .history-subtask-due-date {
   background-color: #2196F3;
   color: white;
-  border: 2px solid black;
+  border: 1px solid black;
   border-radius: 0;
 }
 
 .mondrian .completion-status.on-time {
   background-color: #4CAF50;
   color: white;
-  border: 2px solid black;
+  border: 1px solid black;
   border-radius: 0;
 }
 
 .mondrian .completion-status.late {
   background-color: #F44336;
   color: white;
-  border: 2px solid black;
+  border: 1px solid black;
   border-radius: 0;
 }
 
 .mondrian .history-subtask-item {
   border: 2px solid black;
   border-radius: 0;
-  background-color: #FFF9C4;
+  background-color: #f9f9f9;
 }
 
 /* For the yellow highlighted task in the screenshot */
@@ -2500,13 +2486,13 @@ button:disabled {
   justify-content: center;
   width: 24px;
   height: 24px;
+  min-width: 24px;
   border-radius: 4px;
   border: 2px solid #2196F3;
   background-color: #2196F3;
   color: white;
   font-size: 14px;
   cursor: pointer;
-  flex-shrink: 0;
 }
 
 .mondrian .history-item .checkbox.checked,
