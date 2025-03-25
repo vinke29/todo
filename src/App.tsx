@@ -8,6 +8,7 @@ import Login from './components/Login';
 import { AuthProvider } from './contexts/AuthContext';
 import { Todo, Subtask } from './types';
 import { getTodos, getCompletedTodos, addTodo, updateTodo, deleteTodo, moveTodoToCompleted, restoreTodo } from './firestore';
+import NetworkStatus from './components/NetworkStatus';
 
 // Utility function to detect mobile devices
 const isMobile = () => {
@@ -293,6 +294,9 @@ function App() {
   // State variables for swipe-to-delete functionality
   const [swipedTaskId, setSwipedTaskId] = useState<number | null>(null);
   const [swipedSubtaskInfo, setSwipedSubtaskInfo] = useState<{todoId: number, subtaskId: number} | null>(null);
+  
+  // Move the isOnline state before any conditional returns
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   // Utility function to get the latest date from a list of subtasks
   const getLatestSubtaskDate = (subtasks: Subtask[]): Date | null => {
@@ -811,34 +815,55 @@ function App() {
     }
   }, []);
 
-  // Load todos from Firestore when user changes
+  // Add this ref near the top of your component, with other useState and useRef declarations
+  const dataLoadedRef = useRef(false);
+
+  // Find and replace the useEffect hook that loads user data (around line 817)
+  // Replace this useEffect:
   useEffect(() => {
+    // Only load data if we have a user and haven't loaded data for this user yet
+    if (!currentUser || dataLoadedRef.current) {
+      return;
+    }
+    
+    console.log("Starting to load user data for:", currentUser.uid);
+    setIsAppLoading(true);
+    dataLoadedRef.current = true;
+    
     const loadUserData = async () => {
-      if (currentUser) {
-        setIsAppLoading(true);
-        try {
-          // Load active todos from Firestore
-          const userTodos = await getTodos(currentUser.uid);
-          setTodos(userTodos);
-          setPreviewTodos(userTodos);
-          
-          // Load completed todos from Firestore
-          const userCompletedTodos = await getCompletedTodos(currentUser.uid);
-          setCompletedTasks(userCompletedTodos);
-          
-          console.log("Loaded todos from Firestore:", userTodos.length, "active,", userCompletedTodos.length, "completed");
-        } catch (error) {
-          console.error("Error loading todos from Firestore:", error);
-          
-          // Fallback to localStorage if Firestore fails
-          loadFromLocalStorage();
-        } finally {
-          setIsAppLoading(false);
-        }
+      try {
+        console.log("Fetching active todos from Firestore...");
+        // Load active todos from Firestore
+        const userTodos = await getTodos(currentUser.uid);
+        console.log("Fetched active todos:", userTodos.length);
+        setTodos(userTodos);
+        setPreviewTodos(userTodos);
+        
+        console.log("Fetching completed todos from Firestore...");
+        // Load completed todos from Firestore
+        const userCompletedTodos = await getCompletedTodos(currentUser.uid);
+        console.log("Fetched completed todos:", userCompletedTodos.length);
+        setCompletedTasks(userCompletedTodos);
+        
+        console.log("Successfully loaded all todos from Firestore");
+      } catch (error) {
+        console.error("Error loading todos from Firestore:", error);
+        dataLoadedRef.current = false; // Reset so we can try again
+        
+        // Fallback to localStorage if Firestore fails
+        loadFromLocalStorage();
+      } finally {
+        setIsAppLoading(false);
       }
     };
     
     loadUserData();
+    
+    // Reset dataLoaded flag when user changes
+    return () => {
+      console.log("Cleanup: User changed, resetting data loaded flag");
+      dataLoadedRef.current = false;
+    };
   }, [currentUser]);
 
   // Helper function to load from localStorage as fallback
@@ -921,21 +946,35 @@ function App() {
     setIsSettingsOpen(false);
   };
 
-  // Save todos, title, and theme preference to localStorage when they change
+  // Add this ref near your other refs at the top of the component
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Replace the useEffect for saving todos to Firestore (around line 940-980)
   useEffect(() => {
+    // Always save to localStorage immediately
     localStorage.setItem('todos', JSON.stringify(todos));
     
-    // Also save to Firestore if user is logged in
-    const saveToFirestore = async () => {
-      if (currentUser && todos.length > 0) {
+    // Debounce the Firestore save operations
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Only save to Firestore if user is logged in and we have todos
+    if (currentUser && todos.length > 0) {
+      console.log("Scheduling debounced save to Firestore...");
+      saveTimeoutRef.current = setTimeout(async () => {
+        console.log("Executing debounced save to Firestore");
         try {
+          let updateCount = 0;
           // For each todo, save to Firestore
           for (const todo of todos) {
             // If todo has a firestoreId, update it; otherwise add it
             if (todo.firestoreId) {
               await updateTodo(currentUser.uid, todo);
+              updateCount++;
             } else {
               const newId = await addTodo(currentUser.uid, todo);
+              updateCount++;
               // Update local state with the new Firestore ID
               if (newId) {
                 setTodos(prevTodos => 
@@ -946,37 +985,62 @@ function App() {
               }
             }
           }
+          console.log(`Successfully saved ${updateCount} todos to Firestore`);
         } catch (error) {
           console.error("Error saving todos to Firestore:", error);
         }
+      }, 2000); // 2-second debounce
+    }
+    
+    // Clean up on unmount or when dependencies change
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
     };
-    
-    saveToFirestore();
   }, [todos, currentUser]);
 
-  // Save completed tasks to localStorage whenever they change
+  // Add this ref near your other refs at the top of the component
+  const saveCompletedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Replace the useEffect for saving completed tasks to Firestore (around line 985-1010)
   useEffect(() => {
+    // Always save to localStorage immediately
     localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
     
-    // Also save to Firestore if user is logged in
-    const saveCompletedToFirestore = async () => {
-      if (currentUser && completedTasks.length > 0) {
+    // Debounce the Firestore save operations
+    if (saveCompletedTimeoutRef.current) {
+      clearTimeout(saveCompletedTimeoutRef.current);
+    }
+    
+    // Only save to Firestore if user is logged in and we have completed tasks
+    if (currentUser && completedTasks.length > 0) {
+      console.log("Scheduling debounced save of completed tasks to Firestore...");
+      saveCompletedTimeoutRef.current = setTimeout(async () => {
+        console.log("Executing debounced save of completed tasks to Firestore");
         try {
+          let updateCount = 0;
           for (const task of completedTasks) {
             // For completed tasks that don't have a firestoreId yet
             if (!task.firestoreId) {
               // We need to add it to Firestore completed collection
               await moveTodoToCompleted(currentUser.uid, task);
+              updateCount++;
             }
           }
+          console.log(`Successfully saved ${updateCount} completed tasks to Firestore`);
         } catch (error) {
           console.error("Error saving completed tasks to Firestore:", error);
         }
+      }, 2000); // 2-second debounce
+    }
+    
+    // Clean up on unmount or when dependencies change
+    return () => {
+      if (saveCompletedTimeoutRef.current) {
+        clearTimeout(saveCompletedTimeoutRef.current);
       }
     };
-    
-    saveCompletedToFirestore();
   }, [completedTasks, currentUser]);
 
   // Focus the title input when entering edit mode
@@ -1639,6 +1703,18 @@ function App() {
     );
   }
   
+  // Handle network status changes
+  const handleNetworkStatusChange = (online: boolean) => {
+    console.log(`Network status changed to: ${online ? 'online' : 'offline'}`);
+    setIsOnline(online);
+    
+    // If coming back online, refresh data
+    if (online && currentUser) {
+      console.log('Refreshing data after reconnection');
+      // You might want to reload your todos here or perform other refresh actions
+    }
+  };
+
   // Show loading indicator when fetching user todos from Firestore
   if (isAppLoading) {
     return (
@@ -1655,364 +1731,468 @@ function App() {
 
   // Main app render for authenticated users
   return (
-    <div className={`App ${currentTheme}`}>
-      {currentTheme === 'vangogh' && (
-        <>
-          <div className="sky-layer"></div>
-          <div className="landscape-layer"></div>
-          <div className="stars-layer"></div>
-        </>
-      )}
+    <AuthProvider>
+      {/* Include the NetworkStatus component at the top */}
+      <NetworkStatus onStatusChange={handleNetworkStatusChange} />
       
-      <header className="App-header">
-        <div 
-          className={`app-title-container ${isTitleHovered ? 'hovered' : ''}`}
-          onMouseEnter={() => setIsTitleHovered(true)}
-          onMouseLeave={() => setIsTitleHovered(false)}
-          onClick={!isEditingTitle ? handleTitleEditStart : undefined}
-        >
-          {isEditingTitle ? (
-            <div className="title-edit-container">
-              <input
-                type="text"
-                className="title-edit-input"
-                value={appTitle}
-                onChange={(e) => setAppTitle(e.target.value)}
-                onBlur={handleTitleEditSave}
-                onKeyDown={handleTitleKeyDown}
-                ref={titleInputRef}
-                autoFocus
-              />
-              <div className="title-edit-actions">
-                <button
-                  type="button"
-                  className="title-save-btn"
-                  onClick={handleTitleEditSave}
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  className="title-cancel-btn"
-                  onClick={handleTitleEditCancel}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <h1 title="Click to edit">
-              {appTitle || 'Your to-dos'}
-            </h1>
-          )}
-        </div>
-        
-        <div className="todo-input-container">
-          <div className="todo-input">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Add a new task"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-              id="new-task-input"
-              name="new-task"
-            />
-            <div className="calendar-icon-wrapper">
-              <button 
-                className="calendar-icon new-task-calendar-icon" 
-                onClick={toggleNewTaskCalendar}
-                aria-label="Select due date for new task"
-                type="button"
-              >
-                📅
-              </button>
-            </div>
-            <button onClick={handleAddTodo} className="add-btn" type="button">Add</button>
-          </div>
-          
-          {newTaskDueDate && (
-            <div className="new-task-due-date">
-              Due: {formatDate(newTaskDueDate)}
-              <button 
-                className="clear-date-btn" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setNewTaskDueDate(null);
-                }}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-          )}
-        </div>
-        
-        {/* Add sort toggle - only show when there are active tasks */}
-        {todos.filter(todo => !todo.completed).length > 0 && (
-          <div className="sort-options">
-            <button 
-              className={`sort-toggle ${sortTasksByDueDate ? 'active' : ''}`}
-              onClick={() => setSortTasksByDueDate(!sortTasksByDueDate)}
-              title={sortTasksByDueDate ? "Disable due date sorting" : "Sort tasks by due date"}
-            >
-              {sortTasksByDueDate ? "✓ " : ""}Sort by due date
-            </button>
-          </div>
+      <div className={`App ${currentTheme}`}>
+        {currentTheme === 'vangogh' && (
+          <>
+            <div className="sky-layer"></div>
+            <div className="landscape-layer"></div>
+            <div className="stars-layer"></div>
+          </>
         )}
         
-        <div className="todo-container">
-          {todos.length === 0 && completedTasks.length > 0 && (
-            <div className="completion-message">
-              {currentTheme === 'mondrian' ? (
-                <>
-                  <span>Hooray, you've completed all tasks.</span>
-                  <div className="mondrian-completion-block red"></div>
-                  <div className="mondrian-completion-block blue"></div>
-                  <div className="mondrian-completion-block yellow"></div>
-                </>
-              ) : (
-                <span>🎉 Hooray, you've completed all tasks! 🎉</span>
-              )}
+        <header className="App-header">
+          <div 
+            className={`app-title-container ${isTitleHovered ? 'hovered' : ''}`}
+            onMouseEnter={() => setIsTitleHovered(true)}
+            onMouseLeave={() => setIsTitleHovered(false)}
+            onClick={!isEditingTitle ? handleTitleEditStart : undefined}
+          >
+            {isEditingTitle ? (
+              <div className="title-edit-container">
+                <input
+                  type="text"
+                  className="title-edit-input"
+                  value={appTitle}
+                  onChange={(e) => setAppTitle(e.target.value)}
+                  onBlur={handleTitleEditSave}
+                  onKeyDown={handleTitleKeyDown}
+                  ref={titleInputRef}
+                  autoFocus
+                />
+                <div className="title-edit-actions">
+                  <button
+                    type="button"
+                    className="title-save-btn"
+                    onClick={handleTitleEditSave}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="title-cancel-btn"
+                    onClick={handleTitleEditCancel}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <h1 title="Click to edit">
+                {appTitle || 'Your to-dos'}
+              </h1>
+            )}
+          </div>
+          
+          <div className="todo-input-container">
+            <div className="todo-input">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Add a new task"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+                id="new-task-input"
+                name="new-task"
+              />
+              <div className="calendar-icon-wrapper">
+                <button 
+                  className="calendar-icon new-task-calendar-icon" 
+                  onClick={toggleNewTaskCalendar}
+                  aria-label="Select due date for new task"
+                  type="button"
+                >
+                  📅
+                </button>
+              </div>
+              <button onClick={handleAddTodo} className="add-btn" type="button">Add</button>
+            </div>
+            
+            {newTaskDueDate && (
+              <div className="new-task-due-date">
+                Due: {formatDate(newTaskDueDate)}
+                <button 
+                  className="clear-date-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNewTaskDueDate(null);
+                  }}
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Add sort toggle - only show when there are active tasks */}
+          {todos.filter(todo => !todo.completed).length > 0 && (
+            <div className="sort-options">
+              <button 
+                className={`sort-toggle ${sortTasksByDueDate ? 'active' : ''}`}
+                onClick={() => setSortTasksByDueDate(!sortTasksByDueDate)}
+                title={sortTasksByDueDate ? "Disable due date sorting" : "Sort tasks by due date"}
+              >
+                {sortTasksByDueDate ? "✓ " : ""}Sort by due date
+              </button>
             </div>
           )}
-          <ul ref={todoListRef} className="todo-list">
-            {/* Use the preview todos for rendering during drag operations */}
-            {previewTodos.map((todo) => (
-              <SwipeableTask
-                key={todo.id}
-                data-id={todo.id}
-                className={`${todo.completed ? 'completed' : ''} ${draggedTaskId === todo.id ? 'dragging' : ''} ${dragOverTaskId === todo.id ? 'drag-over' : ''}`}
-                draggable={true}
-                onDragStart={(e: React.DragEvent<HTMLLIElement>) => handleDragStart(e, todo.id)}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
-                onDragEnter={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e: React.DragEvent<HTMLLIElement>) => handleDrop(e, todo.id)}
-                todo={todo}
-                onDelete={handleDeleteTodo}
-              >
-                <div className="todo-main-row">
-                  <div className="todo-item">
-                    <button 
-                      type="button"
-                      className={`checkbox ${todo.completed ? 'checked' : ''}`} 
-                      onClick={() => handleToggleTodo(todo.id)}
-                      aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
-                    >
-                      {todo.completed && "✓"}
-                    </button>
-                    <div className="todo-text-container">
-                      {editingTaskId === todo.id ? (
-                        <input
-                          type="text"
-                          className="edit-input"
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          onBlur={handleEditSave}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave();
-                            if (e.key === 'Escape') handleEditCancel();
-                          }}
-                          ref={editInputRef}
-                          autoFocus
-                        />
-                      ) : (
+          
+          <div className="todo-container">
+            {todos.length === 0 && completedTasks.length > 0 && (
+              <div className="completion-message">
+                {currentTheme === 'mondrian' ? (
+                  <>
+                    <span>Hooray, you've completed all tasks.</span>
+                    <div className="mondrian-completion-block red"></div>
+                    <div className="mondrian-completion-block blue"></div>
+                    <div className="mondrian-completion-block yellow"></div>
+                  </>
+                ) : (
+                  <span>🎉 Hooray, you've completed all tasks! 🎉</span>
+                )}
+              </div>
+            )}
+            <ul ref={todoListRef} className="todo-list">
+              {/* Use the preview todos for rendering during drag operations */}
+              {previewTodos.map((todo) => (
+                <SwipeableTask
+                  key={todo.id}
+                  data-id={todo.id}
+                  className={`${todo.completed ? 'completed' : ''} ${draggedTaskId === todo.id ? 'dragging' : ''} ${dragOverTaskId === todo.id ? 'drag-over' : ''}`}
+                  draggable={true}
+                  onDragStart={(e: React.DragEvent<HTMLLIElement>) => handleDragStart(e, todo.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
+                  onDragEnter={(e: React.DragEvent<HTMLLIElement>) => handleDragOver(e, todo.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e: React.DragEvent<HTMLLIElement>) => handleDrop(e, todo.id)}
+                  todo={todo}
+                  onDelete={handleDeleteTodo}
+                >
+                  <div className="todo-main-row">
+                    <div className="todo-item">
+                      <button 
+                        type="button"
+                        className={`checkbox ${todo.completed ? 'checked' : ''}`} 
+                        onClick={() => handleToggleTodo(todo.id)}
+                        aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
+                      >
+                        {todo.completed && "✓"}
+                      </button>
+                      <div className="todo-text-container">
+                        {editingTaskId === todo.id ? (
+                          <input
+                            type="text"
+                            className="edit-input"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onBlur={handleEditSave}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleEditSave();
+                              if (e.key === 'Escape') handleEditCancel();
+                            }}
+                            ref={editInputRef}
+                            autoFocus
+                          />
+                        ) : (
+                          <>
+                            <span 
+                              className="todo-text"
+                              onClick={() => openDetailsDrawer('task', todo.id)}
+                              title="Click to edit task details and set due date"
+                            >{todo.text}</span>
+                            {todo.dueDate && (
+                              <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="todo-controls">
+                      {editingTaskId !== todo.id && (
                         <>
-                          <span 
-                            className="todo-text"
-                            onClick={() => openDetailsDrawer('task', todo.id)}
-                            title="Click to edit task details and set due date"
-                          >{todo.text}</span>
-                          {todo.dueDate && (
-                            <span className="todo-due-date">Due: {formatDate(todo.dueDate)}</span>
+                          {todo.subtasks.length > 0 && (
+                            <button
+                              type="button"
+                              className={`subtask-toggle has-subtasks`}
+                              onClick={() => toggleTaskExpansion(todo.id)}
+                              aria-label={todo.isExpanded ? "Hide subtasks" : "Show subtasks"}
+                            >
+                              {todo.isExpanded ? "▼" : "▶"}
+                            </button>
                           )}
+                          <button
+                            type="button"
+                            className="add-subtask-btn"
+                            onClick={() => handleAddSubtask(todo.id)}
+                            disabled={editingTaskId === todo.id || addingSubtaskForId !== null || editingSubtaskId !== null}
+                            aria-label="Add subtask"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-btn"
+                            onClick={() => handleDeleteTodo(todo.id)}
+                            aria-label="Delete task"
+                          >
+                            ×
+                          </button>
                         </>
                       )}
                     </div>
                   </div>
                   
-                  <div className="todo-controls">
-                    {editingTaskId !== todo.id && (
-                      <>
-                        {todo.subtasks.length > 0 && (
-                          <button
-                            type="button"
-                            className={`subtask-toggle has-subtasks`}
-                            onClick={() => toggleTaskExpansion(todo.id)}
-                            aria-label={todo.isExpanded ? "Hide subtasks" : "Show subtasks"}
-                          >
-                            {todo.isExpanded ? "▼" : "▶"}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="add-subtask-btn"
-                          onClick={() => handleAddSubtask(todo.id)}
-                          disabled={editingTaskId === todo.id || addingSubtaskForId !== null || editingSubtaskId !== null}
-                          aria-label="Add subtask"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => handleDeleteTodo(todo.id)}
-                          aria-label="Delete task"
-                        >
-                          ×
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Only show subtasks container if there are VISIBLE subtasks or we're adding one */}
-                {((todo.isExpanded && todo.subtasks.some(subtask => !subtask.hidden)) || addingSubtaskForId === todo.id) && (
-                  <div className="subtasks-container">
-                    {addingSubtaskForId === todo.id && (
-                      <div className="new-subtask-input-container">
-                        <input
-                          type="text"
-                          placeholder="Enter subtask..."
-                          className="new-subtask-input"
-                          value={newSubtaskText}
-                          onChange={(e) => setNewSubtaskText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveNewSubtask(todo.id);
-                            if (e.key === 'Escape') handleCancelAddSubtask();
-                          }}
-                          autoFocus
-                        />
-                        <div className="subtask-input-actions">
-                          <button 
-                            type="button"
-                            className="subtask-save-btn" 
-                            onClick={() => handleSaveNewSubtask(todo.id)}
-                            disabled={!newSubtaskText.trim()}
-                          >
-                            Save
-                          </button>
-                          <button 
-                            type="button"
-                            className="subtask-cancel-btn" 
-                            onClick={handleCancelAddSubtask}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {todo.subtasks.some(subtask => !subtask.hidden) && (
-                      <ul className="subtasks-list">
-                        {/* Sort subtasks by due date before rendering */}
-                        {(sortByDueDate([...todo.subtasks]) as Subtask[])
-                          // Only show non-hidden subtasks in the main UI
-                          .filter((subtask: Subtask) => {
-                            // Check if the subtask is hidden
-                            return !subtask.hidden;
-                          })
-                          .map((subtask: Subtask) => (
-                            <SwipeableSubtask
-                              key={subtask.id}
-                              className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
-                              todoId={todo.id}
-                              subtask={subtask}
-                              onDelete={handleDeleteSubtask}
+                  {/* Only show subtasks container if there are VISIBLE subtasks or we're adding one */}
+                  {((todo.isExpanded && todo.subtasks.some(subtask => !subtask.hidden)) || addingSubtaskForId === todo.id) && (
+                    <div className="subtasks-container">
+                      {addingSubtaskForId === todo.id && (
+                        <div className="new-subtask-input-container">
+                          <input
+                            type="text"
+                            placeholder="Enter subtask..."
+                            className="new-subtask-input"
+                            value={newSubtaskText}
+                            onChange={(e) => setNewSubtaskText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveNewSubtask(todo.id);
+                              if (e.key === 'Escape') handleCancelAddSubtask();
+                            }}
+                            autoFocus
+                          />
+                          <div className="subtask-input-actions">
+                            <button 
+                              type="button"
+                              className="subtask-save-btn" 
+                              onClick={() => handleSaveNewSubtask(todo.id)}
+                              disabled={!newSubtaskText.trim()}
                             >
-                              <div className="subtask-main-row">
-                                <div className="subtask-content">
-                                  <button
-                                    type="button"
-                                    className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
-                                    onClick={() => handleToggleSubtask(todo.id, subtask.id)}
-                                    aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
-                                  >
-                                    {subtask.completed && "✓"}
-                                  </button>
-                                  <div className="subtask-text-container">
-                                    {editingSubtaskId && editingSubtaskId.subtaskId === subtask.id ? (
-                                      <input
-                                        type="text"
-                                        className="edit-subtask-input"
-                                        value={subtaskText}
-                                        onChange={(e) => setSubtaskText(e.target.value)}
-                                        onBlur={() => handleEditSubtaskSave()}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') handleEditSubtaskSave();
-                                          if (e.key === 'Escape') handleEditSubtaskCancel();
-                                        }}
-                                        autoFocus
-                                      />
-                                    ) : (
-                                      <>
-                                        <span 
-                                          className="subtask-text"
-                                          onClick={() => openDetailsDrawer('subtask', subtask.id, todo.id)}
-                                          title="Click to edit subtask details and set due date"
-                                        >{subtask.text}</span>
-                                        {subtask.dueDate && (
-                                          <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
-                                        )}
-                                        {subtask.completedDate && (
-                                          <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
-                                        )}
-                                      </>
-                                    )}
+                              Save
+                            </button>
+                            <button 
+                              type="button"
+                              className="subtask-cancel-btn" 
+                              onClick={handleCancelAddSubtask}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {todo.subtasks.some(subtask => !subtask.hidden) && (
+                        <ul className="subtasks-list">
+                          {/* Sort subtasks by due date before rendering */}
+                          {(sortByDueDate([...todo.subtasks]) as Subtask[])
+                            // Only show non-hidden subtasks in the main UI
+                            .filter((subtask: Subtask) => {
+                              // Check if the subtask is hidden
+                              return !subtask.hidden;
+                            })
+                            .map((subtask: Subtask) => (
+                              <SwipeableSubtask
+                                key={subtask.id}
+                                className={`subtask-item ${subtask.completed ? 'completed' : ''}`}
+                                todoId={todo.id}
+                                subtask={subtask}
+                                onDelete={handleDeleteSubtask}
+                              >
+                                <div className="subtask-main-row">
+                                  <div className="subtask-content">
+                                    <button
+                                      type="button"
+                                      className={`subtask-checkbox ${subtask.completed ? 'checked' : ''}`}
+                                      onClick={() => handleToggleSubtask(todo.id, subtask.id)}
+                                      aria-label={subtask.completed ? "Mark subtask as incomplete" : "Mark subtask as complete"}
+                                    >
+                                      {subtask.completed && "✓"}
+                                    </button>
+                                    <div className="subtask-text-container">
+                                      {editingSubtaskId && editingSubtaskId.subtaskId === subtask.id ? (
+                                        <input
+                                          type="text"
+                                          className="edit-subtask-input"
+                                          value={subtaskText}
+                                          onChange={(e) => setSubtaskText(e.target.value)}
+                                          onBlur={() => handleEditSubtaskSave()}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleEditSubtaskSave();
+                                            if (e.key === 'Escape') handleEditSubtaskCancel();
+                                          }}
+                                          autoFocus
+                                        />
+                                      ) : (
+                                        <>
+                                          <span 
+                                            className="subtask-text"
+                                            onClick={() => openDetailsDrawer('subtask', subtask.id, todo.id)}
+                                            title="Click to edit subtask details and set due date"
+                                          >{subtask.text}</span>
+                                          {subtask.dueDate && (
+                                            <span className="subtask-due-date">Due: {formatDate(subtask.dueDate)}</span>
+                                          )}
+                                          {subtask.completedDate && (
+                                            <span className="subtask-completed-date">Done: {formatDate(subtask.completedDate)}</span>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Subtask actions */}
+                                  <div className="subtask-actions">
+                                    <button
+                                      type="button"
+                                      className="delete-subtask-btn"
+                                      onClick={(e) => handleDeleteSubtask(todo.id, subtask.id)}
+                                      aria-label="Delete subtask"
+                                    >
+                                      ×
+                                    </button>
                                   </div>
                                 </div>
-                                
-                                {/* Subtask actions */}
-                                <div className="subtask-actions">
-                                  <button
-                                    type="button"
-                                    className="delete-subtask-btn"
-                                    onClick={(e) => handleDeleteSubtask(todo.id, subtask.id)}
-                                    aria-label="Delete subtask"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              </div>
-                            </SwipeableSubtask>
-                          ))}
-                      </ul>
-                    )}
+                              </SwipeableSubtask>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </SwipeableTask>
+              ))}
+            </ul>
+            
+            {/* End drop zone */}
+            {isDragging && previewTodos.length > 0 && (
+              <div 
+                ref={endDropZoneRef}
+                className={`end-drop-zone ${isDropEndZone ? 'drag-over' : ''}`}
+                onDragOver={(e) => handleDragOver(e)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e)}
+              >
+                <div className="drop-indicator"></div>
+              </div>
+            )}
+          </div>
+        </header>
+        
+        {/* Calendar overlay and popup - separated from the task list for better z-index handling */}
+        {calendarOpenForId !== null && (
+          <div 
+            className="calendar-modal-overlay"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCalendarOpenForId(null);
+            }}
+          >
+            {todos.map(todo => todo.id === calendarOpenForId && (
+              <div 
+                key={`calendar-${todo.id}`}
+                className="calendar-popup-container"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="calendar-popup">
+                  <div className="calendar-header">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCalendarNavigation('prev', 'task');
+                      }}
+                      className="calendar-nav-btn prev-month"
+                      aria-label="Previous month"
+                    >
+                      ◀
+                    </button>
+                    <div className="month-title">
+                      {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCalendarNavigation('next', 'task');
+                      }}
+                      className="calendar-nav-btn next-month"
+                      aria-label="Next month"
+                    >
+                      ▶
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCalendarOpenForId(null);
+                      }}
+                      className="close-btn"
+                    >
+                      ×
+                    </button>
                   </div>
-                )}
-              </SwipeableTask>
+                  
+                  <div className="calendar-content">
+                    <div className="weekday-header">
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                        <div key={day} className="weekday">{day}</div>
+                      ))}
+                    </div>
+                    
+                    <div className="calendar-days">
+                      {(() => {
+                        const year = calendarDate.getFullYear();
+                        const month = calendarDate.getMonth();
+                        
+                        // Get first day of month and total days
+                        const firstDayOfMonth = new Date(year, month, 1).getDay();
+                        const daysInMonth = new Date(year, month + 1, 0).getDate();
+                        
+                        // Create array for calendar days
+                        const days = [];
+                        
+                        // Add empty spaces for days before the first of month
+                        for (let i = 0; i < firstDayOfMonth; i++) {
+                          days.push(<div key={`empty-${i}`} className="empty-day"></div>);
+                        }
+                        
+                        // Add days of month
+                        for (let i = 1; i <= daysInMonth; i++) {
+                          const date = new Date(year, month, i);
+                          days.push(
+                            <button 
+                              key={i}
+                              className={`calendar-day ${todo.dueDate && i === todo.dueDate.getDate() ? 'selected' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDateSelect(todo.id, date);
+                              }}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                        
+                        return days;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
-          
-          {/* End drop zone */}
-          {isDragging && previewTodos.length > 0 && (
+          </div>
+        )}
+        
+        {/* Calendar overlay for new task */}
+        {isNewTaskCalendarOpen && (
+          <div 
+            className="calendar-modal-overlay"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsNewTaskCalendarOpen(false);
+            }}
+          >
             <div 
-              ref={endDropZoneRef}
-              className={`end-drop-zone ${isDropEndZone ? 'drag-over' : ''}`}
-              onDragOver={(e) => handleDragOver(e)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e)}
-            >
-              <div className="drop-indicator"></div>
-            </div>
-          )}
-        </div>
-      </header>
-      
-      {/* Calendar overlay and popup - separated from the task list for better z-index handling */}
-      {calendarOpenForId !== null && (
-        <div 
-          className="calendar-modal-overlay"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCalendarOpenForId(null);
-          }}
-        >
-          {todos.map(todo => todo.id === calendarOpenForId && (
-            <div 
-              key={`calendar-${todo.id}`}
               className="calendar-popup-container"
               onClick={(e) => e.stopPropagation()}
             >
@@ -2021,7 +2201,7 @@ function App() {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCalendarNavigation('prev', 'task');
+                      handleCalendarNavigation('prev', 'newTask');
                     }}
                     className="calendar-nav-btn prev-month"
                     aria-label="Previous month"
@@ -2029,12 +2209,12 @@ function App() {
                     ◀
                   </button>
                   <div className="month-title">
-                    {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {newTaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </div>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCalendarNavigation('next', 'task');
+                      handleCalendarNavigation('next', 'newTask');
                     }}
                     className="calendar-nav-btn next-month"
                     aria-label="Next month"
@@ -2044,7 +2224,7 @@ function App() {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      setCalendarOpenForId(null);
+                      setIsNewTaskCalendarOpen(false);
                     }}
                     className="close-btn"
                   >
@@ -2061,8 +2241,8 @@ function App() {
                   
                   <div className="calendar-days">
                     {(() => {
-                      const year = calendarDate.getFullYear();
-                      const month = calendarDate.getMonth();
+                      const year = newTaskCalendarDate.getFullYear();
+                      const month = newTaskCalendarDate.getMonth();
                       
                       // Get first day of month and total days
                       const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -2079,13 +2259,18 @@ function App() {
                       // Add days of month
                       for (let i = 1; i <= daysInMonth; i++) {
                         const date = new Date(year, month, i);
+                        const isSelected = newTaskDueDate && 
+                                          newTaskDueDate.getDate() === i && 
+                                          newTaskDueDate.getMonth() === month && 
+                                          newTaskDueDate.getFullYear() === year;
+                        
                         days.push(
                           <button 
                             key={i}
-                            className={`calendar-day ${todo.dueDate && i === todo.dueDate.getDate() ? 'selected' : ''}`}
+                            className={`calendar-day ${isSelected ? 'selected' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDateSelect(todo.id, date);
+                              handleNewTaskDateSelect(date);
                             }}
                           >
                             {i}
@@ -2099,847 +2284,622 @@ function App() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-      
-      {/* Calendar overlay for new task */}
-      {isNewTaskCalendarOpen && (
-        <div 
-          className="calendar-modal-overlay"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsNewTaskCalendarOpen(false);
-          }}
-        >
+          </div>
+        )}
+        
+        {/* Calendar overlay for subtasks */}
+        {calendarOpenForSubtask !== null && (
           <div 
-            className="calendar-popup-container"
-            onClick={(e) => e.stopPropagation()}
+            className="calendar-modal-overlay"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCalendarOpenForSubtask(null);
+            }}
           >
-            <div className="calendar-popup">
-              <div className="calendar-header">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCalendarNavigation('prev', 'newTask');
-                  }}
-                  className="calendar-nav-btn prev-month"
-                  aria-label="Previous month"
-                >
-                  ◀
-                </button>
-                <div className="month-title">
-                  {newTaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCalendarNavigation('next', 'newTask');
-                  }}
-                  className="calendar-nav-btn next-month"
-                  aria-label="Next month"
-                >
-                  ▶
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsNewTaskCalendarOpen(false);
-                  }}
-                  className="close-btn"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="calendar-content">
-                <div className="weekday-header">
-                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                    <div key={day} className="weekday">{day}</div>
-                  ))}
-                </div>
-                
-                <div className="calendar-days">
-                  {(() => {
-                    const year = newTaskCalendarDate.getFullYear();
-                    const month = newTaskCalendarDate.getMonth();
-                    
-                    // Get first day of month and total days
-                    const firstDayOfMonth = new Date(year, month, 1).getDay();
-                    const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    
-                    // Create array for calendar days
-                    const days = [];
-                    
-                    // Add empty spaces for days before the first of month
-                    for (let i = 0; i < firstDayOfMonth; i++) {
-                      days.push(<div key={`empty-${i}`} className="empty-day"></div>);
-                    }
-                    
-                    // Add days of month
-                    for (let i = 1; i <= daysInMonth; i++) {
-                      const date = new Date(year, month, i);
-                      const isSelected = newTaskDueDate && 
-                                        newTaskDueDate.getDate() === i && 
-                                        newTaskDueDate.getMonth() === month && 
-                                        newTaskDueDate.getFullYear() === year;
-                      
-                      days.push(
-                        <button 
-                          key={i}
-                          className={`calendar-day ${isSelected ? 'selected' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleNewTaskDateSelect(date);
-                          }}
-                        >
-                          {i}
-                        </button>
-                      );
-                    }
-                    
-                    return days;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Calendar overlay for subtasks */}
-      {calendarOpenForSubtask !== null && (
-        <div 
-          className="calendar-modal-overlay"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCalendarOpenForSubtask(null);
-          }}
-        >
-          {todos.map(todo => 
-            todo.id === calendarOpenForSubtask.todoId && 
-            todo.subtasks.map(subtask => 
-              subtask.id === calendarOpenForSubtask.subtaskId && (
-                <div 
-                  key={`subtask-calendar-${todo.id}-${subtask.id}`}
-                  className="calendar-popup-container"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="calendar-popup">
-                    <div className="calendar-header">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCalendarNavigation('prev', 'subtask');
-                        }}
-                        className="calendar-nav-btn prev-month"
-                        aria-label="Previous month"
-                        type="button"
-                      >
-                        ◀
-                      </button>
-                      <div className="month-title">
-                        {subtaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCalendarNavigation('next', 'subtask');
-                        }}
-                        className="calendar-nav-btn next-month"
-                        aria-label="Next month"
-                        type="button"
-                      >
-                        ▶
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCalendarOpenForSubtask(null);
-                        }}
-                        className="close-btn"
-                        type="button"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    <div className="calendar-content">
-                      <div className="weekday-header">
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                          <div key={day} className="weekday">{day}</div>
-                        ))}
-                      </div>
-                      
-                      <div className="calendar-days">
-                        {(() => {
-                          const year = subtaskCalendarDate.getFullYear();
-                          const month = subtaskCalendarDate.getMonth();
-                          
-                          // Get first day of month and total days
-                          const firstDayOfMonth = new Date(year, month, 1).getDay();
-                          const daysInMonth = new Date(year, month + 1, 0).getDate();
-                          
-                          // Create array for calendar days
-                          const days = [];
-                          
-                          // Add empty spaces for days before the first of month
-                          for (let i = 0; i < firstDayOfMonth; i++) {
-                            days.push(<div key={`empty-${i}`} className="empty-day"></div>);
-                          }
-                          
-                          // Add days of month
-                          for (let i = 1; i <= daysInMonth; i++) {
-                            const date = new Date(year, month, i);
-                            const isSelected = subtask.dueDate && 
-                                             subtask.dueDate.getDate() === i && 
-                                             subtask.dueDate.getMonth() === month && 
-                                             subtask.dueDate.getFullYear() === year;
-                            
-                            days.push(
-                              <button 
-                                key={i}
-                                className={`calendar-day ${isSelected ? 'selected' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSubtaskDateSelect(todo.id, subtask.id, date);
-                                }}
-                                type="button"
-                              >
-                                {i}
-                              </button>
-                            );
-                          }
-                          
-                          return days;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            )
-          )}
-        </div>
-      )}
-      
-      {/* Settings Menu */}
-      {isSettingsOpen && (
-        <div className="settings-menu">
-          <div className="settings-header">
-            <h3>Settings</h3>
-            <button className="close-btn" onClick={toggleSettings}>×</button>
-          </div>
-          <div className="settings-content">
-            <div className="theme-section">
-              <h4>Theme</h4>
-              <div className="theme-options">
-                <div 
-                  className={`theme-option ${currentTheme === 'mondrian' ? 'selected' : ''}`}
-                  onClick={() => setCurrentTheme('mondrian')}
-                >
-                  <div className="theme-preview mondrian-preview">
-                    <div className="preview-block red"></div>
-                    <div className="preview-block blue"></div>
-                    <div className="preview-block yellow"></div>
-                  </div>
-                  <span>Mondrian</span>
-                </div>
-
-                <div 
-                  className={`theme-option ${currentTheme === 'default' ? 'selected' : ''}`}
-                  onClick={() => showComingSoon('Zaha Hadid')}
-                >
-                  <div className="theme-preview default-preview">
-                    <div className="preview-header"></div>
-                    <div className="preview-content">
-                      <div className="preview-line"></div>
-                      <div className="preview-line"></div>
-                    </div>
-                  </div>
-                  <span>Zaha Hadid</span>
-                  <div className="coming-soon-badge">Coming Soon</div>
-                </div>
-
-                <div 
-                  className={`theme-option ${currentTheme === 'vangogh' ? 'selected' : ''}`}
-                  onClick={() => showComingSoon('Van Gogh')}
-                >
-                  <div className="theme-preview vangogh-preview">
-                    <div className="preview-sky"></div>
-                    <div className="preview-stars"></div>
-                    <div className="preview-hills"></div>
-                  </div>
-                  <span>Van Gogh</span>
-                  <div className="coming-soon-badge">Coming Soon</div>
-                </div>
-
-                <div 
-                  className={`theme-option ${currentTheme === 'lecorbusier' ? 'selected' : ''}`}
-                  onClick={() => showComingSoon('Le Corbusier')}
-                >
-                  <div className="theme-preview lecorbusier-preview">
-                    <div className="preview-grid">
-                      <div className="preview-block"></div>
-                      <div className="preview-block accent"></div>
-                      <div className="preview-block primary"></div>
-                    </div>
-                  </div>
-                  <span>Le Corbusier</span>
-                  <div className="coming-soon-badge">Coming Soon</div>
-                </div>
-
-                <div 
-                  className={`theme-option ${currentTheme === 'surprise' ? 'selected' : ''}`}
-                  onClick={() => showComingSoon('Surprise Me')}
-                >
-                  <div className="theme-preview surprise-preview">
-                    <div className="preview-random">
-                      <div className="preview-sparkle"></div>
-                      <div className="preview-sparkle"></div>
-                      <div className="preview-sparkle"></div>
-                    </div>
-                  </div>
-                  <span>Surprise Me!</span>
-                  <div className="coming-soon-badge">Coming Soon</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="account-section">
-              <h4>Account</h4>
-              <div className="account-options">
-                <button 
-                  className="logout-button-settings" 
-                  onClick={handleLogout}
-                  title="Logout from your account"
-                >
-                  <span className="logout-icon">📤</span>
-                  <span>Logout</span>
-                </button>
-                {currentUser && (
-                  <div className="current-user">
-                    <span className="user-email">Logged in as: {currentUser.email}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Icon */}
-      <button 
-        className="settings-icon"
-        onClick={toggleSettings}
-        title="Settings"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M13.7870 3.8051C13.3323 1.93163 10.6677 1.93163 10.2130 3.8051C9.91913 5.01539 8.61052 5.78973 7.47451 5.15811C5.82053 4.20621 4.00621 6.02053 4.95811 7.67451C5.58973 8.81052 4.81539 10.1191 3.60511 10.413C1.73163 10.8677 1.73163 13.5323 3.60511 13.987C4.81539 14.2809 5.58973 15.5895 4.95811 16.7255C4.00621 18.3795 5.82053 20.1938 7.47451 19.2419C8.61052 18.6103 9.91913 19.3846 10.2130 20.5949C10.6677 22.4684 13.3323 22.4684 13.7870 20.5949C14.0809 19.3846 15.3895 18.6103 16.5255 19.2419C18.1795 20.1938 19.9938 18.3795 19.0419 16.7255C18.4103 15.5895 19.1846 14.2809 20.3949 13.987C22.2684 13.5323 22.2684 10.8677 20.3949 10.413C19.1846 10.1191 18.4103 8.81052 19.0419 7.67451C19.9938 6.02053 18.1795 4.20621 16.5255 5.15811C15.3895 5.78973 14.0809 5.01539 13.7870 3.8051ZM12 15.6C13.9882 15.6 15.6 13.9882 15.6 12C15.6 10.0118 13.9882 8.4 12 8.4C10.0118 8.4 8.4 10.0118 8.4 12C8.4 13.9882 10.0118 15.6 12 15.6Z" fill="currentColor"/>
-        </svg>
-      </button>
-      
-      {/* History Icon */}
-      <button 
-        className="history-icon"
-        onClick={toggleHistoryDrawer}
-        title="Task History"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" />
-          <path d="M12 7V12L15.5 15.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-      
-      {/* History Drawer */}
-      {isHistoryDrawerOpen && (
-        <div className="history-drawer">
-          <div className="history-drawer-header">
-            <h3>Task History</h3>
-            <button 
-              className="close-history-btn"
-              onClick={toggleHistoryDrawer}
-              title="Close history"
-            >
-              ×
-            </button>
-          </div>
-          
-          <div className="history-content">
-            {/* Time filter selector */}
-            <div className="history-filters">
-              <div className="filter-tabs">
-                <button 
-                  className={`filter-tab ${historyTimeFilter === '7days' ? 'active' : ''}`}
-                  onClick={() => setHistoryTimeFilter('7days')}
-                >
-                  <span>Last</span>
-                  <span>7 Days</span>
-                </button>
-                <button 
-                  className={`filter-tab ${historyTimeFilter === '30days' ? 'active' : ''}`}
-                  onClick={() => setHistoryTimeFilter('30days')}
-                >
-                  <span>Last</span>
-                  <span>30 Days</span>
-                </button>
-                <button 
-                  className={`filter-tab ${historyTimeFilter === 'custom' ? 'active' : ''}`}
-                  onClick={() => {
-                    setHistoryTimeFilter('custom');
-                    setIsCustomDatePickerOpen(true);
-                  }}
-                >
-                  <span>Custom</span>
-                  <span>Range</span>
-                </button>
-              </div>
-              
-              {historyTimeFilter === 'custom' && (
-                <div className="custom-date-range">
-                  <div className="date-range-display">
-                    <span>From: {customDateRange.start ? formatDate(customDateRange.start) : 'Select start date'}</span>
-                    <span>To: {customDateRange.end ? formatDate(customDateRange.end) : 'Select end date'}</span>
-                  </div>
-                  <button 
-                    className="edit-date-range-btn"
-                    onClick={() => setIsCustomDatePickerOpen(!isCustomDatePickerOpen)}
+            {todos.map(todo => 
+              todo.id === calendarOpenForSubtask.todoId && 
+              todo.subtasks.map(subtask => 
+                subtask.id === calendarOpenForSubtask.subtaskId && (
+                  <div 
+                    key={`subtask-calendar-${todo.id}-${subtask.id}`}
+                    className="calendar-popup-container"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {isCustomDatePickerOpen ? 'Close' : 'Edit'}
-                  </button>
-                </div>
-              )}
-              
-              {/* Custom date picker */}
-              {isCustomDatePickerOpen && (
-                <div className="calendar-modal-overlay" onClick={() => setIsCustomDatePickerOpen(false)}>
-                  <div className="calendar-popup-container" onClick={e => e.stopPropagation()}>
                     <div className="calendar-popup">
                       <div className="calendar-header">
-                        <span className="month-title">
-                          {customDateRange.start && !customDateRange.end 
-                            ? 'Select End Date' 
-                            : 'Select Start Date'}
-                        </span>
                         <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCalendarNavigation('prev', 'subtask');
+                          }}
+                          className="calendar-nav-btn prev-month"
+                          aria-label="Previous month"
+                          type="button"
+                        >
+                          ◀
+                        </button>
+                        <div className="month-title">
+                          {subtaskCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCalendarNavigation('next', 'subtask');
+                          }}
+                          className="calendar-nav-btn next-month"
+                          aria-label="Next month"
+                          type="button"
+                        >
+                          ▶
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCalendarOpenForSubtask(null);
+                          }}
                           className="close-btn"
-                          onClick={() => setIsCustomDatePickerOpen(false)}
+                          type="button"
                         >
                           ×
                         </button>
                       </div>
                       
-                      <div className="weekday-header">
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
-                          <div key={index} className="weekday">{day}</div>
-                        ))}
-                      </div>
-                      
-                      <div className="calendar-days">
-                        {(() => {
-                          const today = new Date();
-                          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                          const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                          
-                          // Calculate days from previous month to show
-                          const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
-                          
-                          // Calculate total days to show
-                          const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
-                          const totalWeeks = Math.ceil(totalDays / 7);
-                          
-                          const days = [];
-                          
-                          // Add empty days for previous month
-                          for (let i = 0; i < firstDayOfWeek; i++) {
-                            days.push(
-                              <div key={`empty-${i}`} className="empty-day"></div>
-                            );
-                          }
-                          
-                          // Add days for current month
-                          for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-                            const date = new Date(today.getFullYear(), today.getMonth(), i);
+                      <div className="calendar-content">
+                        <div className="weekday-header">
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                            <div key={day} className="weekday">{day}</div>
+                          ))}
+                        </div>
+                        
+                        <div className="calendar-days">
+                          {(() => {
+                            const year = subtaskCalendarDate.getFullYear();
+                            const month = subtaskCalendarDate.getMonth();
                             
-                            // Check if this date is selected
-                            const isStartDate = customDateRange.start && 
-                              date.getDate() === customDateRange.start.getDate() &&
-                              date.getMonth() === customDateRange.start.getMonth() &&
-                              date.getFullYear() === customDateRange.start.getFullYear();
+                            // Get first day of month and total days
+                            const firstDayOfMonth = new Date(year, month, 1).getDay();
+                            const daysInMonth = new Date(year, month + 1, 0).getDate();
+                            
+                            // Create array for calendar days
+                            const days = [];
+                            
+                            // Add empty spaces for days before the first of month
+                            for (let i = 0; i < firstDayOfMonth; i++) {
+                              days.push(<div key={`empty-${i}`} className="empty-day"></div>);
+                            }
+                            
+                            // Add days of month
+                            for (let i = 1; i <= daysInMonth; i++) {
+                              const date = new Date(year, month, i);
+                              const isSelected = subtask.dueDate && 
+                                               subtask.dueDate.getDate() === i && 
+                                               subtask.dueDate.getMonth() === month && 
+                                               subtask.dueDate.getFullYear() === year;
                               
-                            const isEndDate = customDateRange.end && 
-                              date.getDate() === customDateRange.end.getDate() &&
-                              date.getMonth() === customDateRange.end.getMonth() &&
-                              date.getFullYear() === customDateRange.end.getFullYear();
+                              days.push(
+                                <button 
+                                  key={i}
+                                  className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSubtaskDateSelect(todo.id, subtask.id, date);
+                                  }}
+                                  type="button"
+                                >
+                                  {i}
+                                </button>
+                              );
+                            }
                             
-                            const isSelected = isStartDate || isEndDate;
-                            
-                            days.push(
-                              <button
-                                key={i}
-                                className={`calendar-day ${isSelected ? 'selected' : ''}`}
-                                onClick={() => handleCustomDateSelect(date)}
-                                type="button"
-                              >
-                                {i}
-                              </button>
-                            );
-                          }
-                          
-                          // Add empty days to complete last week row if needed
-                          const remainingDays = 7 * totalWeeks - days.length;
-                          for (let i = 0; i < remainingDays; i++) {
-                            days.push(
-                              <div key={`empty-end-${i}`} className="empty-day"></div>
-                            );
-                          }
-                          
-                          return days;
-                        })()}
+                            return days;
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Productivity Stats Summary */}
-            {(() => {
-              // Get tasks completed in the selected time period
-              const filterDate = getFilterDate();
-              
-              // For custom range, we need to handle the end date
-              let endDate = new Date();
-              if (historyTimeFilter === 'custom' && customDateRange.end) {
-                endDate = new Date(customDateRange.end);
-                endDate.setHours(23, 59, 59, 999); // End of day
-              }
-              
-              // Count completed tasks in the time period - check completedTasks array
-              const filteredCompletedTasks = completedTasks.filter(task => 
-                task.completedDate && (
-                  historyTimeFilter === 'custom' && customDateRange.end
-                    ? task.completedDate >= filterDate && task.completedDate <= endDate
-                    : task.completedDate >= filterDate
                 )
-              );
+              )
+            )}
+          </div>
+        )}
+        
+        {/* Settings Menu */}
+        {isSettingsOpen && (
+          <div className="settings-menu">
+            <div className="settings-header">
+              <h3>Settings</h3>
+              <button className="close-btn" onClick={toggleSettings}>×</button>
+            </div>
+            <div className="settings-content">
+              <div className="theme-section">
+                <h4>Theme</h4>
+                <div className="theme-options">
+                  <div 
+                    className={`theme-option ${currentTheme === 'mondrian' ? 'selected' : ''}`}
+                    onClick={() => setCurrentTheme('mondrian')}
+                  >
+                    <div className="theme-preview mondrian-preview">
+                      <div className="preview-block red"></div>
+                      <div className="preview-block blue"></div>
+                      <div className="preview-block yellow"></div>
+                    </div>
+                    <span>Mondrian</span>
+                  </div>
+
+                  <div 
+                    className={`theme-option ${currentTheme === 'default' ? 'selected' : ''}`}
+                    onClick={() => showComingSoon('Zaha Hadid')}
+                  >
+                    <div className="theme-preview default-preview">
+                      <div className="preview-header"></div>
+                      <div className="preview-content">
+                        <div className="preview-line"></div>
+                        <div className="preview-line"></div>
+                      </div>
+                    </div>
+                    <span>Zaha Hadid</span>
+                    <div className="coming-soon-badge">Coming Soon</div>
+                  </div>
+
+                  <div 
+                    className={`theme-option ${currentTheme === 'vangogh' ? 'selected' : ''}`}
+                    onClick={() => showComingSoon('Van Gogh')}
+                  >
+                    <div className="theme-preview vangogh-preview">
+                      <div className="preview-sky"></div>
+                      <div className="preview-stars"></div>
+                      <div className="preview-hills"></div>
+                    </div>
+                    <span>Van Gogh</span>
+                    <div className="coming-soon-badge">Coming Soon</div>
+                  </div>
+
+                  <div 
+                    className={`theme-option ${currentTheme === 'lecorbusier' ? 'selected' : ''}`}
+                    onClick={() => showComingSoon('Le Corbusier')}
+                  >
+                    <div className="theme-preview lecorbusier-preview">
+                      <div className="preview-grid">
+                        <div className="preview-block"></div>
+                        <div className="preview-block accent"></div>
+                        <div className="preview-block primary"></div>
+                      </div>
+                    </div>
+                    <span>Le Corbusier</span>
+                    <div className="coming-soon-badge">Coming Soon</div>
+                  </div>
+
+                  <div 
+                    className={`theme-option ${currentTheme === 'surprise' ? 'selected' : ''}`}
+                    onClick={() => showComingSoon('Surprise Me')}
+                  >
+                    <div className="theme-preview surprise-preview">
+                      <div className="preview-random">
+                        <div className="preview-sparkle"></div>
+                        <div className="preview-sparkle"></div>
+                        <div className="preview-sparkle"></div>
+                      </div>
+                    </div>
+                    <span>Surprise Me!</span>
+                    <div className="coming-soon-badge">Coming Soon</div>
+                  </div>
+                </div>
+              </div>
               
-              // Count all completed subtasks within completed tasks
-              let completedSubtasks = 0;
-              let taskCompletionTimes = 0;
-              let subtaskCompletionTimes = 0;
-              let tasksWithDueDate = 0;
-              let subtasksWithDueDate = 0;
-              
-              // Calculate average completion time for tasks and count subtasks
-              filteredCompletedTasks.forEach((task: Todo) => {
-                if (task.completedDate && task.dueDate) {
-                  // Calculate real time difference (can be negative for early completion)
-                  const timeDiff = (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24);
-                  taskCompletionTimes += timeDiff;
-                  tasksWithDueDate++;
+              <div className="account-section">
+                <h4>Account</h4>
+                <div className="account-options">
+                  <button 
+                    className="logout-button-settings" 
+                    onClick={handleLogout}
+                    title="Logout from your account"
+                  >
+                    <span className="logout-icon">📤</span>
+                    <span>Logout</span>
+                  </button>
+                  {currentUser && (
+                    <div className="current-user">
+                      <span className="user-email">Logged in as: {currentUser.email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Icon */}
+        <button 
+          className="settings-icon"
+          onClick={toggleSettings}
+          title="Settings"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" clipRule="evenodd" d="M13.7870 3.8051C13.3323 1.93163 10.6677 1.93163 10.2130 3.8051C9.91913 5.01539 8.61052 5.78973 7.47451 5.15811C5.82053 4.20621 4.00621 6.02053 4.95811 7.67451C5.58973 8.81052 4.81539 10.1191 3.60511 10.413C1.73163 10.8677 1.73163 13.5323 3.60511 13.987C4.81539 14.2809 5.58973 15.5895 4.95811 16.7255C4.00621 18.3795 5.82053 20.1938 7.47451 19.2419C8.61052 18.6103 9.91913 19.3846 10.2130 20.5949C10.6677 22.4684 13.3323 22.4684 13.7870 20.5949C14.0809 19.3846 15.3895 18.6103 16.5255 19.2419C18.1795 20.1938 19.9938 18.3795 19.0419 16.7255C18.4103 15.5895 19.1846 14.2809 20.3949 13.987C22.2684 13.5323 22.2684 10.8677 20.3949 10.413C19.1846 10.1191 18.4103 8.81052 19.0419 7.67451C19.9938 6.02053 18.1795 4.20621 16.5255 5.15811C15.3895 5.78973 14.0809 5.01539 13.7870 3.8051ZM12 15.6C13.9882 15.6 15.6 13.9882 15.6 12C15.6 10.0118 13.9882 8.4 12 8.4C10.0118 8.4 8.4 10.0118 8.4 12C8.4 13.9882 10.0118 15.6 12 15.6Z" fill="currentColor"/>
+          </svg>
+        </button>
+        
+        {/* History Icon */}
+        <button 
+          className="history-icon"
+          onClick={toggleHistoryDrawer}
+          title="Task History"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.5" />
+            <path d="M12 7V12L15.5 15.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        
+        {/* History Drawer */}
+        {isHistoryDrawerOpen && (
+          <div className="history-drawer">
+            <div className="history-drawer-header">
+              <h3>Task History</h3>
+              <button 
+                className="close-history-btn"
+                onClick={toggleHistoryDrawer}
+                title="Close history"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="history-content">
+              {/* Time filter selector */}
+              <div className="history-filters">
+                <div className="filter-tabs">
+                  <button 
+                    className={`filter-tab ${historyTimeFilter === '7days' ? 'active' : ''}`}
+                    onClick={() => setHistoryTimeFilter('7days')}
+                  >
+                    <span>Last</span>
+                    <span>7 Days</span>
+                  </button>
+                  <button 
+                    className={`filter-tab ${historyTimeFilter === '30days' ? 'active' : ''}`}
+                    onClick={() => setHistoryTimeFilter('30days')}
+                  >
+                    <span>Last</span>
+                    <span>30 Days</span>
+                  </button>
+                  <button 
+                    className={`filter-tab ${historyTimeFilter === 'custom' ? 'active' : ''}`}
+                    onClick={() => {
+                      setHistoryTimeFilter('custom');
+                      setIsCustomDatePickerOpen(true);
+                    }}
+                  >
+                    <span>Custom</span>
+                    <span>Range</span>
+                  </button>
+                </div>
+                
+                {historyTimeFilter === 'custom' && (
+                  <div className="custom-date-range">
+                    <div className="date-range-display">
+                      <span>From: {customDateRange.start ? formatDate(customDateRange.start) : 'Select start date'}</span>
+                      <span>To: {customDateRange.end ? formatDate(customDateRange.end) : 'Select end date'}</span>
+                    </div>
+                    <button 
+                      className="edit-date-range-btn"
+                      onClick={() => setIsCustomDatePickerOpen(!isCustomDatePickerOpen)}
+                    >
+                      {isCustomDatePickerOpen ? 'Close' : 'Edit'}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Custom date picker */}
+                {isCustomDatePickerOpen && (
+                  <div className="calendar-modal-overlay" onClick={() => setIsCustomDatePickerOpen(false)}>
+                    <div className="calendar-popup-container" onClick={e => e.stopPropagation()}>
+                      <div className="calendar-popup">
+                        <div className="calendar-header">
+                          <span className="month-title">
+                            {customDateRange.start && !customDateRange.end 
+                              ? 'Select End Date' 
+                              : 'Select Start Date'}
+                          </span>
+                          <button 
+                            className="close-btn"
+                            onClick={() => setIsCustomDatePickerOpen(false)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        
+                        <div className="weekday-header">
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+                            <div key={index} className="weekday">{day}</div>
+                          ))}
+                        </div>
+                        
+                        <div className="calendar-days">
+                          {(() => {
+                            const today = new Date();
+                            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                            
+                            // Calculate days from previous month to show
+                            const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
+                            
+                            // Calculate total days to show
+                            const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
+                            const totalWeeks = Math.ceil(totalDays / 7);
+                            
+                            const days = [];
+                            
+                            // Add empty days for previous month
+                            for (let i = 0; i < firstDayOfWeek; i++) {
+                              days.push(
+                                <div key={`empty-${i}`} className="empty-day"></div>
+                              );
+                            }
+                            
+                            // Add days for current month
+                            for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                              const date = new Date(today.getFullYear(), today.getMonth(), i);
+                              
+                              // Check if this date is selected
+                              const isStartDate = customDateRange.start && 
+                                date.getDate() === customDateRange.start.getDate() &&
+                                date.getMonth() === customDateRange.start.getMonth() &&
+                                date.getFullYear() === customDateRange.start.getFullYear();
+                                
+                              const isEndDate = customDateRange.end && 
+                                date.getDate() === customDateRange.end.getDate() &&
+                                date.getMonth() === customDateRange.end.getMonth() &&
+                                date.getFullYear() === customDateRange.end.getFullYear();
+                              
+                              const isSelected = isStartDate || isEndDate;
+                              
+                              days.push(
+                                <button
+                                  key={i}
+                                  className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                                  onClick={() => handleCustomDateSelect(date)}
+                                  type="button"
+                                >
+                                  {i}
+                                </button>
+                              );
+                            }
+                            
+                            // Add empty days to complete last week row if needed
+                            const remainingDays = 7 * totalWeeks - days.length;
+                            for (let i = 0; i < remainingDays; i++) {
+                              days.push(
+                                <div key={`empty-end-${i}`} className="empty-day"></div>
+                              );
+                            }
+                            
+                            return days;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Productivity Stats Summary */}
+              {(() => {
+                // Get tasks completed in the selected time period
+                const filterDate = getFilterDate();
+                
+                // For custom range, we need to handle the end date
+                let endDate = new Date();
+                if (historyTimeFilter === 'custom' && customDateRange.end) {
+                  endDate = new Date(customDateRange.end);
+                  endDate.setHours(23, 59, 59, 999); // End of day
                 }
                 
-                // Count and calculate completed subtasks
-                task.subtasks.forEach((subtask: Subtask) => {
-                  if (subtask.completed && subtask.completedDate) {
-                    // Check if the subtask completion date is within our filter
-                    let isInRange = false;
-                    
-                    if (historyTimeFilter === 'custom' && customDateRange.end) {
-                      isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
-                    } else {
-                      isInRange = subtask.completedDate >= filterDate;
-                    }
-                    
-                    if (isInRange) {
-                      completedSubtasks++;
+                // Count completed tasks in the time period - check completedTasks array
+                const filteredCompletedTasks = completedTasks.filter(task => 
+                  task.completedDate && (
+                    historyTimeFilter === 'custom' && customDateRange.end
+                      ? task.completedDate >= filterDate && task.completedDate <= endDate
+                      : task.completedDate >= filterDate
+                  )
+                );
+                
+                // Count all completed subtasks within completed tasks
+                let completedSubtasks = 0;
+                let taskCompletionTimes = 0;
+                let subtaskCompletionTimes = 0;
+                let tasksWithDueDate = 0;
+                let subtasksWithDueDate = 0;
+                
+                // Calculate average completion time for tasks and count subtasks
+                filteredCompletedTasks.forEach((task: Todo) => {
+                  if (task.completedDate && task.dueDate) {
+                    // Calculate real time difference (can be negative for early completion)
+                    const timeDiff = (task.completedDate.getTime() - task.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                    taskCompletionTimes += timeDiff;
+                    tasksWithDueDate++;
+                  }
+                  
+                  // Count and calculate completed subtasks
+                  task.subtasks.forEach((subtask: Subtask) => {
+                    if (subtask.completed && subtask.completedDate) {
+                      // Check if the subtask completion date is within our filter
+                      let isInRange = false;
                       
-                      if (subtask.dueDate) {
-                        // Calculate real time difference (can be negative for early completion)
-                        const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
-                        subtaskCompletionTimes += timeDiff;
-                        subtasksWithDueDate++;
+                      if (historyTimeFilter === 'custom' && customDateRange.end) {
+                        isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                      } else {
+                        isInRange = subtask.completedDate >= filterDate;
+                      }
+                      
+                      if (isInRange) {
+                        completedSubtasks++;
+                        
+                        if (subtask.dueDate) {
+                          // Calculate real time difference (can be negative for early completion)
+                          const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                          subtaskCompletionTimes += timeDiff;
+                          subtasksWithDueDate++;
+                        }
                       }
                     }
-                  }
+                  });
                 });
-              });
-              
-              // Find completed subtasks in active tasks
-              const activeTasks = todos.filter(todo => !todo.completed);
-              activeTasks.forEach((task: Todo) => {
-                task.subtasks.forEach((subtask: Subtask) => {
-                  if (subtask.completed && subtask.completedDate) {
-                    // Check if the subtask completion date is within our filter
-                    let isInRange = false;
-                    
-                    if (historyTimeFilter === 'custom' && customDateRange.end) {
-                      isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
-                    } else {
-                      isInRange = subtask.completedDate >= filterDate;
-                    }
-                    
-                    if (isInRange) {
-                      completedSubtasks++;
+                
+                // Find completed subtasks in active tasks
+                const activeTasks = todos.filter(todo => !todo.completed);
+                activeTasks.forEach((task: Todo) => {
+                  task.subtasks.forEach((subtask: Subtask) => {
+                    if (subtask.completed && subtask.completedDate) {
+                      // Check if the subtask completion date is within our filter
+                      let isInRange = false;
                       
-                      if (subtask.dueDate) {
-                        // Calculate real time difference (can be negative for early completion)
-                        const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
-                        subtaskCompletionTimes += timeDiff;
-                        subtasksWithDueDate++;
+                      if (historyTimeFilter === 'custom' && customDateRange.end) {
+                        isInRange = subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                      } else {
+                        isInRange = subtask.completedDate >= filterDate;
+                      }
+                      
+                      if (isInRange) {
+                        completedSubtasks++;
+                        
+                        if (subtask.dueDate) {
+                          // Calculate real time difference (can be negative for early completion)
+                          const timeDiff = (subtask.completedDate.getTime() - subtask.dueDate.getTime()) / (1000 * 60 * 60 * 24);
+                          subtaskCompletionTimes += timeDiff;
+                          subtasksWithDueDate++;
+                        }
                       }
                     }
-                  }
+                  });
                 });
-              });
-              
-              // Calculate averages - don't use Math.max to allow negative values (early completion)
-              const avgTaskCompletionTime = tasksWithDueDate > 0 
-                ? (taskCompletionTimes / tasksWithDueDate).toFixed(1)
-                : "N/A";
                 
-              const avgSubtaskCompletionTime = subtasksWithDueDate > 0
-                ? (subtaskCompletionTimes / subtasksWithDueDate).toFixed(1)
-                : "N/A";
-              
-              // Create period text based on selected filter
-              let periodText = "";
-              switch (historyTimeFilter) {
-                case '7days':
-                  periodText = "in the past 7 days";
-                  break;
-                case '30days':
-                  periodText = "in the past 30 days";
-                  break;
-                case 'custom':
-                  periodText = "in the selected period";
-                  break;
-              }
-              
-              // Helper function to create a user-friendly message about completion time
-              const getCompletionMessage = (avgTime: string) => {
-                if (avgTime === "N/A") return "N/A";
+                // Calculate averages - don't use Math.max to allow negative values (early completion)
+                const avgTaskCompletionTime = tasksWithDueDate > 0 
+                  ? (taskCompletionTimes / tasksWithDueDate).toFixed(1)
+                  : "N/A";
+                  
+                const avgSubtaskCompletionTime = subtasksWithDueDate > 0
+                  ? (subtaskCompletionTimes / subtasksWithDueDate).toFixed(1)
+                  : "N/A";
                 
-                const timeValue = parseFloat(avgTime);
-                if (timeValue < 0) {
-                  return `completed ${Math.abs(timeValue).toFixed(1)} days before the due date on average`;
-                } else if (timeValue === 0) {
-                  return "completed exactly on the due date";
-                } else {
-                  return `completed ${timeValue} days after the due date on average`;
-                }
-              };
-              
-              // Get encouraging message based on timeliness
-              const getEncouragementMessage = () => {
-                const taskTimeValue = tasksWithDueDate > 0 ? parseFloat(avgTaskCompletionTime as string) : 0;
-                const subtaskTimeValue = subtasksWithDueDate > 0 ? parseFloat(avgSubtaskCompletionTime as string) : 0;
-                
-                // No due dates set
-                if (tasksWithDueDate === 0 && subtasksWithDueDate === 0) {
-                  return "Keep up the good work!";
+                // Create period text based on selected filter
+                let periodText = "";
+                switch (historyTimeFilter) {
+                  case '7days':
+                    periodText = "in the past 7 days";
+                    break;
+                  case '30days':
+                    periodText = "in the past 30 days";
+                    break;
+                  case 'custom':
+                    periodText = "in the selected period";
+                    break;
                 }
                 
-                // If either tasks or subtasks are late
-                if (taskTimeValue > 0 || subtaskTimeValue > 0) {
-                  const messages = [
-                    "Keep working hard to get your tasks done on time!",
-                    "Remember, earlier planning leads to better results!",
-                    "Small improvements in timing add up to big productivity gains!",
-                    "Being on time is a skill you can develop with practice!"
-                  ];
-                  // Return a random message
-                  return messages[Math.floor(Math.random() * messages.length)];
-                } 
-                // All tasks/subtasks completed on time or early
-                else {
-                  const messages = [
-                    "Fantastic work hitting your deadlines!",
-                    "Keep up the good work!",
-                    "You're doing an amazing job with your task management!",
-                    "Excellent time management skills!"
-                  ];
-                  // Return a random message
-                  return messages[Math.floor(Math.random() * messages.length)];
+                // Helper function to create a user-friendly message about completion time
+                const getCompletionMessage = (avgTime: string) => {
+                  if (avgTime === "N/A") return "N/A";
+                  
+                  const timeValue = parseFloat(avgTime);
+                  if (timeValue < 0) {
+                    return `completed ${Math.abs(timeValue).toFixed(1)} days before the due date on average`;
+                  } else if (timeValue === 0) {
+                    return "completed exactly on the due date";
+                  } else {
+                    return `completed ${timeValue} days after the due date on average`;
+                  }
+                };
+                
+                // Get encouraging message based on timeliness
+                const getEncouragementMessage = () => {
+                  const taskTimeValue = tasksWithDueDate > 0 ? parseFloat(avgTaskCompletionTime as string) : 0;
+                  const subtaskTimeValue = subtasksWithDueDate > 0 ? parseFloat(avgSubtaskCompletionTime as string) : 0;
+                  
+                  // No due dates set
+                  if (tasksWithDueDate === 0 && subtasksWithDueDate === 0) {
+                    return "Keep up the good work!";
+                  }
+                  
+                  // If either tasks or subtasks are late
+                  if (taskTimeValue > 0 || subtaskTimeValue > 0) {
+                    const messages = [
+                      "Keep working hard to get your tasks done on time!",
+                      "Remember, earlier planning leads to better results!",
+                      "Small improvements in timing add up to big productivity gains!",
+                      "Being on time is a skill you can develop with practice!"
+                    ];
+                    // Return a random message
+                    return messages[Math.floor(Math.random() * messages.length)];
+                  } 
+                  // All tasks/subtasks completed on time or early
+                  else {
+                    const messages = [
+                      "Fantastic work hitting your deadlines!",
+                      "Keep up the good work!",
+                      "You're doing an amazing job with your task management!",
+                      "Excellent time management skills!"
+                    ];
+                    // Return a random message
+                    return messages[Math.floor(Math.random() * messages.length)];
+                  }
+                };
+                
+                // Only show the stats if we have completed tasks or subtasks
+                if (filteredCompletedTasks.length > 0 || completedSubtasks > 0) {
+                  return (
+                    <div className="productivity-stats">
+                      <h3 className="stats-header">
+                        <span role="img" aria-label="celebration">🎯</span> Your Productivity
+                      </h3>
+                      <div className="stats-message">
+                        <p>Hooray! You've finished <strong>{filteredCompletedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.</p>
+                        
+                        {tasksWithDueDate > 0 && (
+                          <p className={parseFloat(avgTaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
+                            Tasks were <strong>{getCompletionMessage(avgTaskCompletionTime as string)}</strong>.
+                          </p>
+                        )}
+                        
+                        {subtasksWithDueDate > 0 && (
+                          <p className={parseFloat(avgSubtaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
+                            Subtasks were <strong>{getCompletionMessage(avgSubtaskCompletionTime as string)}</strong>.
+                          </p>
+                        )}
+                        
+                        <p className="stats-encouragement">{getEncouragementMessage()}</p>
+                      </div>
+                    </div>
+                  );
                 }
-              };
-              
-              // Only show the stats if we have completed tasks or subtasks
-              if (filteredCompletedTasks.length > 0 || completedSubtasks > 0) {
+                
                 return (
                   <div className="productivity-stats">
                     <h3 className="stats-header">
-                      <span role="img" aria-label="celebration">🎯</span> Your Productivity
+                      <span role="img" aria-label="target">🎯</span> Your Productivity
                     </h3>
                     <div className="stats-message">
-                      <p>Hooray! You've finished <strong>{filteredCompletedTasks.length}</strong> tasks and <strong>{completedSubtasks}</strong> subtasks {periodText}.</p>
-                      
-                      {tasksWithDueDate > 0 && (
-                        <p className={parseFloat(avgTaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
-                          Tasks were <strong>{getCompletionMessage(avgTaskCompletionTime as string)}</strong>.
-                        </p>
-                      )}
-                      
-                      {subtasksWithDueDate > 0 && (
-                        <p className={parseFloat(avgSubtaskCompletionTime as string) <= 0 ? "on-time" : "late"}>
-                          Subtasks were <strong>{getCompletionMessage(avgSubtaskCompletionTime as string)}</strong>.
-                        </p>
-                      )}
-                      
-                      <p className="stats-encouragement">{getEncouragementMessage()}</p>
+                      <p>No completed tasks or subtasks {periodText}.</p>
+                      <p className="stats-encouragement">Start completing tasks to see your productivity stats!</p>
                     </div>
                   </div>
                 );
-              }
+              })()}
               
-              return (
-                <div className="productivity-stats">
-                  <h3 className="stats-header">
-                    <span role="img" aria-label="target">🎯</span> Your Productivity
-                  </h3>
-                  <div className="stats-message">
-                    <p>No completed tasks or subtasks {periodText}.</p>
-                    <p className="stats-encouragement">Start completing tasks to see your productivity stats!</p>
+              {/* Section for completed tasks */}
+              <div className="history-section">
+                <h4 className="history-section-title">Recently Completed Tasks</h4>
+                
+                {completedTasks.length === 0 ? (
+                  <div className="no-history">
+                    <p>No tasks completed in the selected time period</p>
                   </div>
-                </div>
-              );
-            })()}
-            
-            {/* Section for completed tasks */}
-            <div className="history-section">
-              <h4 className="history-section-title">Recently Completed Tasks</h4>
-              
-              {completedTasks.length === 0 ? (
-                <div className="no-history">
-                  <p>No tasks completed in the selected time period</p>
-                </div>
-              ) : (
-                <div className="history-list">
-                  {/* Completed main tasks with their subtasks */}
-                  {completedTasks
-                    .filter(task => {
-                      if (!task.completedDate) return false;
-                      const filterDate = getFilterDate();
-                      
-                      // For custom range, check if the date is within the range
-                      if (historyTimeFilter === 'custom' && customDateRange.end) {
-                        // Set end of day for end date to include the entire day
-                        const endDate = new Date(customDateRange.end);
-                        endDate.setHours(23, 59, 59, 999);
-                        return task.completedDate >= filterDate && task.completedDate <= endDate;
-                      }
-                      
-                      // For preset ranges, just check if after filter date
-                      return task.completedDate >= filterDate;
-                    })
-                    .map(task => (
-                      <div key={task.id} className="history-item">
-                        <div className="history-task-main">
-                          <button
-                            type="button"
-                            className={`checkbox checked`}
-                            onClick={() => handleRestoreTask(task.id)}
-                            aria-label="Restore task to active list"
-                            title="Uncheck to restore task"
-                          >
-                            ✓
-                          </button>
-                          <div className="history-task-header">
-                            <span 
-                              className="history-task-text"
-                              onClick={() => openDetailsDrawer('task', task.id)}
-                              style={{ cursor: 'pointer' }}
-                              title="Click to view details"
-                            >{task.text}</span>
-                            <div className="history-date-container">
-                              {task.completedDate && (
-                                <span className="history-done-date">
-                                  Done: {formatDate(task.completedDate)}
-                                </span>
-                              )}
-                              {task.dueDate && (
-                                <span className="history-due-date">
-                                  Due: {formatDate(task.dueDate)}
-                                </span>
-                              )}
-                              {task.completedDate && task.dueDate && (
-                                <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
-                                  {getCompletionStatus(task.completedDate, task.dueDate).label}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Show all subtasks for completed tasks */}
-                        {task.subtasks.length > 0 && (
-                          <div className="history-subtasks">
-                            {task.subtasks.map(subtask => (
-                              <div key={subtask.id} className="history-subtask-item">
-                                <button
-                                  type="button"
-                                  className={`subtask-checkbox checked`}
-                                  onClick={() => handleRestoreSubtaskFromCompletedTask(task.id, subtask.id)}
-                                  aria-label="Restore subtask to a new or existing active task"
-                                  title="Uncheck to restore subtask"
-                                >
-                                  ✓
-                                </button>
-                                <div className="history-subtask-content">
-                                  <span 
-                                    className="history-subtask-text"
-                                    onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
-                                    style={{ cursor: 'pointer' }}
-                                    title="Click to view details"
-                                  >{subtask.text}</span>
-                                  <div className="history-subtask-dates">
-                                    {subtask.completedDate && (
-                                      <span className="history-subtask-done-date">
-                                        Done: {formatDate(subtask.completedDate)}
-                                      </span>
-                                    )}
-                                    {subtask.dueDate && (
-                                      <span className="history-subtask-due-date">
-                                        Due: {formatDate(subtask.dueDate)}
-                                      </span>
-                                    )}
-                                    {subtask.completedDate && subtask.dueDate && (
-                                      <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
-                                        {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
-            </div>
-            
-            {/* Section for completed subtasks in active tasks */}
-            {(() => {
-              // Find all active tasks with completed subtasks (including hidden ones)
-              const activeTasks = todos.filter(todo => !todo.completed);
-              const tasksWithCompletedSubtasks = activeTasks.filter(task => 
-                task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
-              );
-              
-              if (tasksWithCompletedSubtasks.length > 0) {
-                return (
-                  <div className="history-section">
-                    <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
-                    
-                    {tasksWithCompletedSubtasks.map(task => {
-                      // Filter subtasks completed in the selected time period, include hidden ones
-                      const filteredCompletedSubtasks = task.subtasks.filter(subtask => {
-                        if (!subtask.completed || !subtask.completedDate) return false;
-                        
+                ) : (
+                  <div className="history-list">
+                    {/* Completed main tasks with their subtasks */}
+                    {completedTasks
+                      .filter(task => {
+                        if (!task.completedDate) return false;
                         const filterDate = getFilterDate();
                         
                         // For custom range, check if the date is within the range
@@ -2947,278 +2907,389 @@ function App() {
                           // Set end of day for end date to include the entire day
                           const endDate = new Date(customDateRange.end);
                           endDate.setHours(23, 59, 59, 999);
-                          return subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                          return task.completedDate >= filterDate && task.completedDate <= endDate;
                         }
                         
                         // For preset ranges, just check if after filter date
-                        return subtask.completedDate >= filterDate;
-                      });
-                      
-                      if (filteredCompletedSubtasks.length === 0) return null;
-                      
-                      return (
-                        <div key={task.id} className="history-item active-parent">
+                        return task.completedDate >= filterDate;
+                      })
+                      .map(task => (
+                        <div key={task.id} className="history-item">
                           <div className="history-task-main">
-                            <span 
-                              className="history-parent-task-text"
-                              onClick={() => openDetailsDrawer('task', task.id)}
-                              style={{ cursor: 'pointer' }}
-                              title="Click to view details"
-                            >{task.text}</span>
+                            <button
+                              type="button"
+                              className={`checkbox checked`}
+                              onClick={() => handleRestoreTask(task.id)}
+                              aria-label="Restore task to active list"
+                              title="Uncheck to restore task"
+                            >
+                              ✓
+                            </button>
+                            <div className="history-task-header">
+                              <span 
+                                className="history-task-text"
+                                onClick={() => openDetailsDrawer('task', task.id)}
+                                style={{ cursor: 'pointer' }}
+                                title="Click to view details"
+                              >{task.text}</span>
+                              <div className="history-date-container">
+                                {task.completedDate && (
+                                  <span className="history-done-date">
+                                    Done: {formatDate(task.completedDate)}
+                                  </span>
+                                )}
+                                {task.dueDate && (
+                                  <span className="history-due-date">
+                                    Due: {formatDate(task.dueDate)}
+                                  </span>
+                                )}
+                                {task.completedDate && task.dueDate && (
+                                  <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
+                                    {getCompletionStatus(task.completedDate, task.dueDate).label}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           
-                          <div className="history-subtasks">
-                            {filteredCompletedSubtasks.map(subtask => (
-                              <div key={subtask.id} className="history-subtask-item">
-                                <button
-                                  type="button"
-                                  className={`subtask-checkbox checked`}
-                                  onClick={() => handleRestoreSubtask(task.id, subtask.id)}
-                                  aria-label="Restore subtask to incomplete"
-                                  title="Uncheck to restore subtask"
-                                >
-                                  ✓
-                                </button>
-                                <div className="history-subtask-content">
-                                  <span 
-                                    className="history-subtask-text"
-                                    onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
-                                    style={{ cursor: 'pointer' }}
-                                    title="Click to view details"
-                                  >{subtask.text}</span>
-                                  <div className="history-subtask-dates">
-                                    {subtask.completedDate && (
-                                      <span className="history-subtask-done-date">
-                                        Done: {formatDate(subtask.completedDate)}
-                                      </span>
-                                    )}
-                                    {subtask.dueDate && (
-                                      <span className="history-subtask-due-date">
-                                        Due: {formatDate(subtask.dueDate)}
-                                      </span>
-                                    )}
-                                    {subtask.completedDate && subtask.dueDate && (
-                                      <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
-                                        {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
-                                      </span>
-                                    )}
+                          {/* Show all subtasks for completed tasks */}
+                          {task.subtasks.length > 0 && (
+                            <div className="history-subtasks">
+                              {task.subtasks.map(subtask => (
+                                <div key={subtask.id} className="history-subtask-item">
+                                  <button
+                                    type="button"
+                                    className={`subtask-checkbox checked`}
+                                    onClick={() => handleRestoreSubtaskFromCompletedTask(task.id, subtask.id)}
+                                    aria-label="Restore subtask to a new or existing active task"
+                                    title="Uncheck to restore subtask"
+                                  >
+                                    ✓
+                                  </button>
+                                  <div className="history-subtask-content">
+                                    <span 
+                                      className="history-subtask-text"
+                                      onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
+                                      style={{ cursor: 'pointer' }}
+                                      title="Click to view details"
+                                    >{subtask.text}</span>
+                                    <div className="history-subtask-dates">
+                                      {subtask.completedDate && (
+                                        <span className="history-subtask-done-date">
+                                          Done: {formatDate(subtask.completedDate)}
+                                        </span>
+                                      )}
+                                      {subtask.dueDate && (
+                                        <span className="history-subtask-due-date">
+                                          Due: {formatDate(subtask.dueDate)}
+                                        </span>
+                                      )}
+                                      {subtask.completedDate && subtask.dueDate && (
+                                        <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
+                                          {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
+                      ))
+                    }
                   </div>
-                );
-              }
-              
-              return null;
-            })()}
-          </div>
-        </div>
-      )}
-      
-      {/* Details Drawer */}
-      {isDetailsDrawerOpen && editingDetails && (
-        <div className={`details-drawer ${currentTheme}`}>
-          <div className="details-drawer-header">
-            <h3>{editingDetails.type === 'task' ? 'Task Details' : 'Subtask Details'}</h3>
-            <button 
-              className="close-history-btn"
-              onClick={closeDetailsDrawer}
-              title="Close details"
-            >
-              ×
-            </button>
-          </div>
-          
-          <div className="details-content">
-            <div className="details-field">
-              <label htmlFor="details-title">Title:</label>
-              <input
-                id="details-title"
-                type="text"
-                value={editingDetails.title}
-                onChange={(e) => setEditingDetails({
-                  ...editingDetails,
-                  title: e.target.value
-                })}
-                placeholder="Enter title"
-              />
-            </div>
-            <div className="details-field">
-              <label htmlFor="details-notes">Notes:</label>
-              <textarea
-                id="details-notes"
-                value={editingDetails.notes || ''}
-                onChange={(e) => setEditingDetails({
-                  ...editingDetails,
-                  notes: e.target.value
-                })}
-                placeholder="Add notes here..."
-                rows={6}
-              />
-            </div>
-            <div className="details-field">
-              <label htmlFor="details-due-date">Due Date:</label>
-              <div className="details-due-date">
-                {editingDetails.dueDate ? (
-                  <div className="details-date-display">
-                    <span>{formatDate(editingDetails.dueDate)}</span>
-                    <button
-                      className="details-date-clear"
-                      onClick={() => setEditingDetails({
-                        ...editingDetails,
-                        dueDate: null
-                      })}
-                      title="Clear due date"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className="details-date-select"
-                    onClick={() => {
-                      setCalendarDate(new Date());
-                      setDetailsCalendarOpen(true);
-                    }}
-                  >
-                    Set Due Date
-                  </button>
                 )}
               </div>
-              {detailsCalendarOpen && (
-                <div className="details-calendar">
-                  <div className="calendar-month">
-                    <button
-                      className="month-nav"
-                      onClick={() => {
-                        const newDate = new Date(calendarDate);
-                        newDate.setMonth(newDate.getMonth() - 1);
-                        setCalendarDate(newDate);
-                      }}
-                    >
-                      &lt;
-                    </button>
-                    <div className="month-label">
-                      {calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                    </div>
-                    <button
-                      className="month-nav"
-                      onClick={() => {
-                        const newDate = new Date(calendarDate);
-                        newDate.setMonth(newDate.getMonth() + 1);
-                        setCalendarDate(newDate);
-                      }}
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                  <div className="weekday-header">
-                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
-                      <div key={index} className="weekday">{day}</div>
-                    ))}
-                  </div>
-                  <div className="calendar-days">
-                    {(() => {
-                      const year = calendarDate.getFullYear();
-                      const month = calendarDate.getMonth();
-                      const firstDayOfMonth = new Date(year, month, 1);
-                      const lastDayOfMonth = new Date(year, month + 1, 0);
+              
+              {/* Section for completed subtasks in active tasks */}
+              {(() => {
+                // Find all active tasks with completed subtasks (including hidden ones)
+                const activeTasks = todos.filter(todo => !todo.completed);
+                const tasksWithCompletedSubtasks = activeTasks.filter(task => 
+                  task.subtasks.some(subtask => subtask.completed && subtask.completedDate)
+                );
+                
+                if (tasksWithCompletedSubtasks.length > 0) {
+                  return (
+                    <div className="history-section">
+                      <h4 className="history-section-title">Completed Subtasks in Active Tasks</h4>
                       
-                      // Calculate days from previous month to show
-                      const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
-                      
-                      // Calculate total days to show
-                      const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
-                      const totalWeeks = Math.ceil(totalDays / 7);
-                      
-                      const days = [];
-                      
-                      // Add empty days for previous month
-                      for (let i = 0; i < firstDayOfWeek; i++) {
-                        days.push(
-                          <div key={`empty-${i}`} className="empty-day"></div>
-                        );
-                      }
-                      
-                      // Add days for current month
-                      for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-                        const date = new Date(year, month, i);
-                        const isSelected = editingDetails.dueDate && 
-                          date.getDate() === editingDetails.dueDate.getDate() &&
-                          date.getMonth() === editingDetails.dueDate.getMonth() &&
-                          date.getFullYear() === editingDetails.dueDate.getFullYear();
+                      {tasksWithCompletedSubtasks.map(task => {
+                        // Filter subtasks completed in the selected time period, include hidden ones
+                        const filteredCompletedSubtasks = task.subtasks.filter(subtask => {
+                          if (!subtask.completed || !subtask.completedDate) return false;
+                          
+                          const filterDate = getFilterDate();
+                          
+                          // For custom range, check if the date is within the range
+                          if (historyTimeFilter === 'custom' && customDateRange.end) {
+                            // Set end of day for end date to include the entire day
+                            const endDate = new Date(customDateRange.end);
+                            endDate.setHours(23, 59, 59, 999);
+                            return subtask.completedDate >= filterDate && subtask.completedDate <= endDate;
+                          }
+                          
+                          // For preset ranges, just check if after filter date
+                          return subtask.completedDate >= filterDate;
+                        });
                         
-                        days.push(
-                          <button
-                            key={i}
-                            className={`calendar-day ${isSelected ? 'selected' : ''}`}
-                            onClick={() => {
-                              const selectedDate = new Date(year, month, i);
-                              setEditingDetails({
-                                ...editingDetails,
-                                dueDate: selectedDate
-                              });
-                              setDetailsCalendarOpen(false);
-                            }}
-                            type="button"
-                          >
-                            {i}
-                          </button>
+                        if (filteredCompletedSubtasks.length === 0) return null;
+                        
+                        return (
+                          <div key={task.id} className="history-item active-parent">
+                            <div className="history-task-main">
+                              <span 
+                                className="history-parent-task-text"
+                                onClick={() => openDetailsDrawer('task', task.id)}
+                                style={{ cursor: 'pointer' }}
+                                title="Click to view details"
+                              >{task.text}</span>
+                            </div>
+                            
+                            <div className="history-subtasks">
+                              {filteredCompletedSubtasks.map(subtask => (
+                                <div key={subtask.id} className="history-subtask-item">
+                                  <button
+                                    type="button"
+                                    className={`subtask-checkbox checked`}
+                                    onClick={() => handleRestoreSubtask(task.id, subtask.id)}
+                                    aria-label="Restore subtask to incomplete"
+                                    title="Uncheck to restore subtask"
+                                  >
+                                    ✓
+                                  </button>
+                                  <div className="history-subtask-content">
+                                    <span 
+                                      className="history-subtask-text"
+                                      onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
+                                      style={{ cursor: 'pointer' }}
+                                      title="Click to view details"
+                                    >{subtask.text}</span>
+                                    <div className="history-subtask-dates">
+                                      {subtask.completedDate && (
+                                        <span className="history-subtask-done-date">
+                                          Done: {formatDate(subtask.completedDate)}
+                                        </span>
+                                      )}
+                                      {subtask.dueDate && (
+                                        <span className="history-subtask-due-date">
+                                          Due: {formatDate(subtask.dueDate)}
+                                        </span>
+                                      )}
+                                      {subtask.completedDate && subtask.dueDate && (
+                                        <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
+                                          {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         );
-                      }
-                      
-                      // Add empty days to complete last week row if needed
-                      const remainingDays = 7 * totalWeeks - days.length;
-                      for (let i = 0; i < remainingDays; i++) {
-                        days.push(
-                          <div key={`empty-end-${i}`} className="empty-day"></div>
-                        );
-                      }
-                      
-                      return days;
-                    })()}
-                  </div>
+                      })}
+                    </div>
+                  );
+                }
+                
+                return null;
+              })()}
+            </div>
+          </div>
+        )}
+        
+        {/* Details Drawer */}
+        {isDetailsDrawerOpen && editingDetails && (
+          <div className={`details-drawer ${currentTheme}`}>
+            <div className="details-drawer-header">
+              <h3>{editingDetails.type === 'task' ? 'Task Details' : 'Subtask Details'}</h3>
+              <button 
+                className="close-history-btn"
+                onClick={closeDetailsDrawer}
+                title="Close details"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="details-content">
+              <div className="details-field">
+                <label htmlFor="details-title">Title:</label>
+                <input
+                  id="details-title"
+                  type="text"
+                  value={editingDetails.title}
+                  onChange={(e) => setEditingDetails({
+                    ...editingDetails,
+                    title: e.target.value
+                  })}
+                  placeholder="Enter title"
+                />
+              </div>
+              <div className="details-field">
+                <label htmlFor="details-notes">Notes:</label>
+                <textarea
+                  id="details-notes"
+                  value={editingDetails.notes || ''}
+                  onChange={(e) => setEditingDetails({
+                    ...editingDetails,
+                    notes: e.target.value
+                  })}
+                  placeholder="Add notes here..."
+                  rows={6}
+                />
+              </div>
+              <div className="details-field">
+                <label htmlFor="details-due-date">Due Date:</label>
+                <div className="details-due-date">
+                  {editingDetails.dueDate ? (
+                    <div className="details-date-display">
+                      <span>{formatDate(editingDetails.dueDate)}</span>
+                      <button
+                        className="details-date-clear"
+                        onClick={() => setEditingDetails({
+                          ...editingDetails,
+                          dueDate: null
+                        })}
+                        title="Clear due date"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="details-date-select"
+                      onClick={() => {
+                        setCalendarDate(new Date());
+                        setDetailsCalendarOpen(true);
+                      }}
+                    >
+                      Set Due Date
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="details-buttons">
-              <button className="save-details" onClick={saveDetailsDrawer}>Save</button>
-              <button className="cancel-details" onClick={closeDetailsDrawer}>Cancel</button>
+                {detailsCalendarOpen && (
+                  <div className="details-calendar">
+                    <div className="calendar-month">
+                      <button
+                        className="month-nav"
+                        onClick={() => {
+                          const newDate = new Date(calendarDate);
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setCalendarDate(newDate);
+                        }}
+                      >
+                        &lt;
+                      </button>
+                      <div className="month-label">
+                        {calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </div>
+                      <button
+                        className="month-nav"
+                        onClick={() => {
+                          const newDate = new Date(calendarDate);
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setCalendarDate(newDate);
+                        }}
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                    <div className="weekday-header">
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+                        <div key={index} className="weekday">{day}</div>
+                      ))}
+                    </div>
+                    <div className="calendar-days">
+                      {(() => {
+                        const year = calendarDate.getFullYear();
+                        const month = calendarDate.getMonth();
+                        const firstDayOfMonth = new Date(year, month, 1);
+                        const lastDayOfMonth = new Date(year, month + 1, 0);
+                        
+                        // Calculate days from previous month to show
+                        const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday, 1 for Monday, etc.
+                        
+                        // Calculate total days to show
+                        const totalDays = firstDayOfWeek + lastDayOfMonth.getDate();
+                        const totalWeeks = Math.ceil(totalDays / 7);
+                        
+                        const days = [];
+                        
+                        // Add empty days for previous month
+                        for (let i = 0; i < firstDayOfWeek; i++) {
+                          days.push(
+                            <div key={`empty-${i}`} className="empty-day"></div>
+                          );
+                        }
+                        
+                        // Add days for current month
+                        for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                          const date = new Date(year, month, i);
+                          const isSelected = editingDetails.dueDate && 
+                            date.getDate() === editingDetails.dueDate.getDate() &&
+                            date.getMonth() === editingDetails.dueDate.getMonth() &&
+                            date.getFullYear() === editingDetails.dueDate.getFullYear();
+                          
+                          days.push(
+                            <button
+                              key={i}
+                              className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                              onClick={() => {
+                                const selectedDate = new Date(year, month, i);
+                                setEditingDetails({
+                                  ...editingDetails,
+                                  dueDate: selectedDate
+                                });
+                                setDetailsCalendarOpen(false);
+                              }}
+                              type="button"
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                        
+                        // Add empty days to complete last week row if needed
+                        const remainingDays = 7 * totalWeeks - days.length;
+                        for (let i = 0; i < remainingDays; i++) {
+                          days.push(
+                            <div key={`empty-end-${i}`} className="empty-day"></div>
+                          );
+                        }
+                        
+                        return days;
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="details-buttons">
+                <button className="save-details" onClick={saveDetailsDrawer}>Save</button>
+                <button className="cancel-details" onClick={closeDetailsDrawer}>Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Coming Soon Modal */}
-      {showComingSoonModal && (
-        <div className="coming-soon-modal-overlay" onClick={() => setShowComingSoonModal(false)}>
-          <div className="coming-soon-modal" onClick={e => e.stopPropagation()}>
-            <div className="coming-soon-modal-content">
-              <div className="coming-soon-icon">🚧</div>
-              <h3>{comingSoonTheme} Theme</h3>
-              <p>We're working on something amazing! This theme will be available soon.</p>
-              <button className="coming-soon-close-btn" onClick={() => setShowComingSoonModal(false)}>Got it!</button>
+        )}
+        
+        {/* Coming Soon Modal */}
+        {showComingSoonModal && (
+          <div className="coming-soon-modal-overlay" onClick={() => setShowComingSoonModal(false)}>
+            <div className="coming-soon-modal" onClick={e => e.stopPropagation()}>
+              <div className="coming-soon-modal-content">
+                <div className="coming-soon-icon">🚧</div>
+                <h3>{comingSoonTheme} Theme</h3>
+                <p>We're working on something amazing! This theme will be available soon.</p>
+                <button className="coming-soon-close-btn" onClick={() => setShowComingSoonModal(false)}>Got it!</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Wrap the App component with the AuthProvider
-function AppWithAuth() {
-  return (
-    <AuthProvider>
-      <App />
+        )}
+      </div>
     </AuthProvider>
   );
 }
 
-export { AppWithAuth };
 export default App;
