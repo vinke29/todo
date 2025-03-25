@@ -2507,6 +2507,9 @@ button:disabled {
   overflow: hidden;
   transition: transform 0.3s ease;
   touch-action: pan-y;
+  will-change: transform; /* Performance optimization */
+  -webkit-user-select: none; /* Prevent text selection during swipe */
+  user-select: none;
 }
 
 .swipe-open {
@@ -2527,6 +2530,8 @@ button:disabled {
   transform: translateX(100%);
   opacity: 0;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1; /* Ensure it's above other elements */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
 }
 
 .swipe-action.show {
@@ -2555,6 +2560,8 @@ button:disabled {
     overflow: hidden;
     transition: transform 0.3s ease;
     touch-action: pan-y;
+    will-change: transform;
+    -webkit-touch-callout: none; /* Prevent callout to copy image, etc when tap to hold */
   }
 
   /* Make swipe action clearly visible */
@@ -2571,6 +2578,7 @@ button:disabled {
     width: 80px;
     transform: translateX(100%);
     transition: transform 0.3s ease;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
   }
 
   .swipe-open {

@@ -6,6 +6,19 @@ import { Todo, Subtask } from './types';
 const TODOS_COLLECTION = 'todos';
 const COMPLETED_TODOS_COLLECTION = 'completedTodos';
 
+// Helper function for console logging in a TypeScript-safe way
+const safeLog = (message: string) => {
+  if (typeof window !== 'undefined' && window.console && window.console.log) {
+    window.console.log(message);
+  }
+};
+
+const safeError = (message: string, error?: any) => {
+  if (typeof window !== 'undefined' && window.console && window.console.error) {
+    window.console.error(message, error);
+  }
+};
+
 // Helper function to ensure user document exists before accessing collections
 const ensureUserDoc = async (userId: string): Promise<boolean> => {
   try {
@@ -13,7 +26,7 @@ const ensureUserDoc = async (userId: string): Promise<boolean> => {
     const userDoc = await getDoc(userDocRef);
     
     if (!userDoc.exists()) {
-      console.log(`Creating user document for ${userId}`);
+      safeLog(`Creating user document for ${userId}`);
       await setDoc(userDocRef, { 
         createdAt: Timestamp.now(),
         lastActive: Timestamp.now() 
@@ -22,7 +35,7 @@ const ensureUserDoc = async (userId: string): Promise<boolean> => {
     
     return true;
   } catch (error) {
-    console.error('Error ensuring user document exists:', error);
+    safeError('Error ensuring user document exists:', error);
     return false;
   }
 };
@@ -91,7 +104,7 @@ const convertDateToTimestamp = (data: any): any => {
 // Get active todos for the current user
 export const getTodos = async (userId: string): Promise<Todo[]> => {
   if (!isFirestoreInitialized()) {
-    console.error('Firestore not initialized, cannot get todos');
+    safeError('Firestore not initialized, cannot get todos');
     return [];
   }
   
@@ -99,12 +112,12 @@ export const getTodos = async (userId: string): Promise<Todo[]> => {
     // First ensure the user document exists
     await ensureUserDoc(userId);
     
-    console.log(`Getting todos for user ${userId} from collection ${TODOS_COLLECTION}`);
+    safeLog(`Getting todos for user ${userId} from collection ${TODOS_COLLECTION}`);
     const userTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const q = query(userTodosRef, orderBy('id', 'asc'));
     const snapshot = await getDocs(q);
     
-    console.log(`Retrieved ${snapshot.size} todos from Firestore`);
+    safeLog(`Retrieved ${snapshot.size} todos from Firestore`);
     const todos: Todo[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
@@ -116,7 +129,7 @@ export const getTodos = async (userId: string): Promise<Todo[]> => {
     
     return todos;
   } catch (error) {
-    console.error('Error getting todos:', error);
+    safeError('Error getting todos:', error);
     return [];
   }
 };
@@ -124,7 +137,7 @@ export const getTodos = async (userId: string): Promise<Todo[]> => {
 // Get completed todos for the current user
 export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
   if (!isFirestoreInitialized()) {
-    console.error('Firestore not initialized, cannot get completed todos');
+    safeError('Firestore not initialized, cannot get completed todos');
     return [];
   }
   
@@ -132,12 +145,12 @@ export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
     // First ensure the user document exists
     await ensureUserDoc(userId);
     
-    console.log(`Getting completed todos for user ${userId} from collection ${COMPLETED_TODOS_COLLECTION}`);
+    safeLog(`Getting completed todos for user ${userId} from collection ${COMPLETED_TODOS_COLLECTION}`);
     const userCompletedTodosRef = collection(db, 'users', userId, COMPLETED_TODOS_COLLECTION);
     const q = query(userCompletedTodosRef, orderBy('completedDate', 'desc'));
     const snapshot = await getDocs(q);
     
-    console.log(`Retrieved ${snapshot.size} completed todos from Firestore`);
+    safeLog(`Retrieved ${snapshot.size} completed todos from Firestore`);
     const completedTodos: Todo[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
@@ -149,7 +162,7 @@ export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
     
     return completedTodos;
   } catch (error) {
-    console.error('Error getting completed todos:', error);
+    safeError('Error getting completed todos:', error);
     return [];
   }
 };
@@ -157,7 +170,7 @@ export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
 // Add a new todo
 export const addTodo = async (userId: string, todo: Todo): Promise<string> => {
   if (!isFirestoreInitialized()) {
-    console.error('Firestore not initialized, cannot add todo');
+    safeError('Firestore not initialized, cannot add todo');
     return '';
   }
   
@@ -168,10 +181,10 @@ export const addTodo = async (userId: string, todo: Todo): Promise<string> => {
     const userTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const todoData = convertDateToTimestamp(todo);
     const docRef = await addDoc(userTodosRef, todoData);
-    console.log(`Added todo with ID: ${docRef.id}`);
+    safeLog(`Added todo with ID: ${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    console.error('Error adding todo:', error);
+    safeError('Error adding todo:', error);
     return '';
   }
 };
@@ -190,7 +203,7 @@ export const updateTodo = async (userId: string, todo: Todo): Promise<boolean> =
     await setDoc(todoRef, todoWithoutId);
     return true;
   } catch (error) {
-    console.error('Error updating todo:', error);
+    safeError('Error updating todo:', error);
     return false;
   }
 };
@@ -202,7 +215,7 @@ export const deleteTodo = async (userId: string, todoId: string): Promise<boolea
     await deleteDoc(todoRef);
     return true;
   } catch (error) {
-    console.error('Error deleting todo:', error);
+    safeError('Error deleting todo:', error);
     return false;
   }
 };
@@ -227,7 +240,7 @@ export const moveTodoToCompleted = async (userId: string, todo: Todo): Promise<b
     
     return true;
   } catch (error) {
-    console.error('Error moving todo to completed:', error);
+    safeError('Error moving todo to completed:', error);
     return false;
   }
 };
@@ -252,7 +265,7 @@ export const restoreTodo = async (userId: string, todo: Todo): Promise<boolean> 
     
     return true;
   } catch (error) {
-    console.error('Error restoring todo:', error);
+    safeError('Error restoring todo:', error);
     return false;
   }
 };
@@ -260,26 +273,26 @@ export const restoreTodo = async (userId: string, todo: Todo): Promise<boolean> 
 // Expose a function to check collection paths - this can help debug database structure issues
 export const checkCollectionPaths = async (userId: string): Promise<boolean> => {
   try {
-    console.log("Checking Firestore collection paths...");
+    safeLog("Checking Firestore collection paths...");
     
     // Check user document
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
-    console.log(`User document exists: ${userDoc.exists()}`);
+    safeLog(`User document exists: ${userDoc.exists()}`);
     
     // Check todos collection
     const todosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const todosSnapshot = await getDocs(todosRef);
-    console.log(`Todos collection accessible, contains ${todosSnapshot.size} documents`);
+    safeLog(`Todos collection accessible, contains ${todosSnapshot.size} documents`);
     
     // Check completed todos collection
     const completedTodosRef = collection(db, 'users', userId, COMPLETED_TODOS_COLLECTION);
     const completedTodosSnapshot = await getDocs(completedTodosRef);
-    console.log(`Completed todos collection accessible, contains ${completedTodosSnapshot.size} documents`);
+    safeLog(`Completed todos collection accessible, contains ${completedTodosSnapshot.size} documents`);
     
     return true;
   } catch (error) {
-    console.error("Error checking collection paths:", error);
+    safeError("Error checking collection paths:", error);
     return false;
   }
 }; 

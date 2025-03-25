@@ -60,6 +60,7 @@ const SwipeableTask = ({
   const [isOpen, setIsOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [touchMoved, setTouchMoved] = useState(false);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -67,23 +68,44 @@ const SwipeableTask = ({
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
+    setTouchMoved(false);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
     setTouchEnd(e.targetTouches[0].clientX);
+    setTouchMoved(true);
+    
+    // Optional: add real-time dragging effect
+    if (touchStart !== null) {
+      const currentDistance = touchStart - e.targetTouches[0].clientX;
+      if (currentDistance > 0) { // Only allow left swipes (to show delete)
+        const translateX = Math.min(currentDistance, 80); // Limit to max 80px (width of delete button)
+        (e.currentTarget as HTMLElement).style.transform = `translateX(-${translateX}px)`;
+      }
+    }
   };
 
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+  const onTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (!touchStart || !touchEnd || !touchMoved) {
+      (e.currentTarget as HTMLElement).style.transform = ''; // Reset any inline transform
+      return;
+    }
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
     
+    // Reset inline transform since we'll use the CSS class
+    (e.currentTarget as HTMLElement).style.transform = '';
+    
     if (isLeftSwipe) {
       setIsOpen(true);
     } else if (isRightSwipe) {
       setIsOpen(false);
+    } else {
+      // If the swipe wasn't far enough in either direction, reset to the previous state
     }
   };
 
@@ -107,7 +129,8 @@ const SwipeableTask = ({
           className={`swipe-action ${isOpen ? 'show' : ''} ${todo.isExpanded ? 'includes-subtasks' : ''}`}
           onClick={() => {
             setIsOpen(false);
-            onDelete(todo.id);
+            // Add a small delay to allow the closing animation to play
+            setTimeout(() => onDelete(todo.id), 300);
           }}
         >
           <span className="swipe-action-text">Delete</span>
@@ -136,6 +159,7 @@ const SwipeableSubtask = ({
   const [isOpen, setIsOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [touchMoved, setTouchMoved] = useState(false);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -144,25 +168,44 @@ const SwipeableSubtask = ({
     e.stopPropagation();
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
+    setTouchMoved(false);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     e.stopPropagation();
     setTouchEnd(e.targetTouches[0].clientX);
+    setTouchMoved(true);
+    
+    // Optional: add real-time dragging effect
+    if (touchStart !== null) {
+      const currentDistance = touchStart - e.targetTouches[0].clientX;
+      if (currentDistance > 0) { // Only allow left swipes (to show delete)
+        const translateX = Math.min(currentDistance, 80); // Limit to max 80px (width of delete button)
+        (e.currentTarget as HTMLElement).style.transform = `translateX(-${translateX}px)`;
+      }
+    }
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
     e.stopPropagation();
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || !touchMoved) {
+      (e.currentTarget as HTMLElement).style.transform = ''; // Reset any inline transform
+      return;
+    }
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
     
+    // Reset inline transform since we'll use the CSS class
+    (e.currentTarget as HTMLElement).style.transform = '';
+    
     if (isLeftSwipe) {
       setIsOpen(true);
     } else if (isRightSwipe) {
       setIsOpen(false);
+    } else {
+      // If the swipe wasn't far enough in either direction, reset to the previous state
     }
   };
 
@@ -176,7 +219,8 @@ const SwipeableSubtask = ({
     // Prevent event bubbling to parent components
     e.stopPropagation();
     setIsOpen(false);
-    onDelete(todoId, subtask.id);
+    // Add a small delay to allow the closing animation to play
+    setTimeout(() => onDelete(todoId, subtask.id), 300);
   };
 
   return (
