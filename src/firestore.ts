@@ -180,7 +180,24 @@ export const addTodo = async (userId: string, todo: Todo): Promise<string> => {
     
     const userTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const todoData = convertDateToTimestamp(todo);
-    const docRef = await addDoc(userTodosRef, todoData);
+    
+    // Replace any undefined values with null for Firestore compatibility
+    const firestoreCompatibleData = Object.entries(todoData).reduce((acc, [key, value]) => {
+      acc[key] = value === undefined ? null : value;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    // If there are subtasks, handle those too
+    if (firestoreCompatibleData.subtasks && Array.isArray(firestoreCompatibleData.subtasks)) {
+      firestoreCompatibleData.subtasks = firestoreCompatibleData.subtasks.map((subtask: any) => {
+        return Object.entries(subtask).reduce((acc, [key, value]) => {
+          acc[key] = value === undefined ? null : value;
+          return acc;
+        }, {} as Record<string, any>);
+      });
+    }
+    
+    const docRef = await addDoc(userTodosRef, firestoreCompatibleData);
     safeLog(`Added todo with ID: ${docRef.id}`);
     return docRef.id;
   } catch (error) {
@@ -200,7 +217,23 @@ export const updateTodo = async (userId: string, todo: Todo): Promise<boolean> =
     // Remove the firestoreId property before saving (it's not part of the todo data model)
     const { firestoreId, ...todoWithoutId } = todoData;
     
-    await setDoc(todoRef, todoWithoutId);
+    // Replace any undefined values with null for Firestore compatibility
+    const firestoreCompatibleData = Object.entries(todoWithoutId).reduce((acc, [key, value]) => {
+      acc[key] = value === undefined ? null : value;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    // If there are subtasks, handle those too
+    if (firestoreCompatibleData.subtasks && Array.isArray(firestoreCompatibleData.subtasks)) {
+      firestoreCompatibleData.subtasks = firestoreCompatibleData.subtasks.map((subtask: any) => {
+        return Object.entries(subtask).reduce((acc, [key, value]) => {
+          acc[key] = value === undefined ? null : value;
+          return acc;
+        }, {} as Record<string, any>);
+      });
+    }
+    
+    await setDoc(todoRef, firestoreCompatibleData);
     return true;
   } catch (error) {
     safeError('Error updating todo:', error);
@@ -232,7 +265,23 @@ export const moveTodoToCompleted = async (userId: string, todo: Todo): Promise<b
     // Remove the firestoreId property before saving
     const { firestoreId, ...todoWithoutId } = todoData;
     
-    await addDoc(completedTodosRef, todoWithoutId);
+    // Replace any undefined values with null for Firestore compatibility
+    const firestoreCompatibleData = Object.entries(todoWithoutId).reduce((acc, [key, value]) => {
+      acc[key] = value === undefined ? null : value;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    // If there are subtasks, handle those too
+    if (firestoreCompatibleData.subtasks && Array.isArray(firestoreCompatibleData.subtasks)) {
+      firestoreCompatibleData.subtasks = firestoreCompatibleData.subtasks.map((subtask: any) => {
+        return Object.entries(subtask).reduce((acc, [key, value]) => {
+          acc[key] = value === undefined ? null : value;
+          return acc;
+        }, {} as Record<string, any>);
+      });
+    }
+    
+    await addDoc(completedTodosRef, firestoreCompatibleData);
     
     // Then delete from active todos
     const todoRef = doc(db, 'users', userId, TODOS_COLLECTION, todo.firestoreId);
@@ -251,21 +300,37 @@ export const restoreTodo = async (userId: string, todo: Todo): Promise<boolean> 
   
   try {
     // First, add to active todos
-    const todosRef = collection(db, 'users', userId, TODOS_COLLECTION);
+    const activeTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const todoData = convertDateToTimestamp(todo);
     
     // Remove the firestoreId property before saving
     const { firestoreId, ...todoWithoutId } = todoData;
     
-    await addDoc(todosRef, todoWithoutId);
+    // Replace any undefined values with null for Firestore compatibility
+    const firestoreCompatibleData = Object.entries(todoWithoutId).reduce((acc, [key, value]) => {
+      acc[key] = value === undefined ? null : value;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    // If there are subtasks, handle those too
+    if (firestoreCompatibleData.subtasks && Array.isArray(firestoreCompatibleData.subtasks)) {
+      firestoreCompatibleData.subtasks = firestoreCompatibleData.subtasks.map((subtask: any) => {
+        return Object.entries(subtask).reduce((acc, [key, value]) => {
+          acc[key] = value === undefined ? null : value;
+          return acc;
+        }, {} as Record<string, any>);
+      });
+    }
+    
+    await addDoc(activeTodosRef, firestoreCompatibleData);
     
     // Then delete from completed todos
-    const completedTodoRef = doc(db, 'users', userId, COMPLETED_TODOS_COLLECTION, todo.firestoreId);
-    await deleteDoc(completedTodoRef);
+    const todoRef = doc(db, 'users', userId, COMPLETED_TODOS_COLLECTION, todo.firestoreId);
+    await deleteDoc(todoRef);
     
     return true;
   } catch (error) {
-    safeError('Error restoring todo:', error);
+    safeError('Error restoring todo from completed:', error);
     return false;
   }
 };

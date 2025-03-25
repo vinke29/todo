@@ -39,7 +39,7 @@ interface EditingDetails {
   id: number;
   parentId?: number;
   title: string;
-  notes: string | null;
+  notes: string | undefined;
   dueDate: Date | null;
 }
 
@@ -1696,7 +1696,7 @@ function App() {
           type,
           id,
           title: task.text,
-          notes: task.notes || null,
+          notes: task.notes || undefined,
           dueDate: task.dueDate
         });
         setIsDetailsDrawerOpen(true);
@@ -1710,7 +1710,7 @@ function App() {
           type,
           id,
           title: completedTask.text,
-          notes: completedTask.notes || null,
+          notes: completedTask.notes || undefined,
           dueDate: completedTask.dueDate
         });
         setIsDetailsDrawerOpen(true);
@@ -1729,7 +1729,7 @@ function App() {
             id,
             parentId,
             title: subtask.text,
-            notes: subtask.notes || null,
+            notes: subtask.notes || undefined,
             dueDate: subtask.dueDate
           });
           setIsDetailsDrawerOpen(true);
@@ -1747,7 +1747,7 @@ function App() {
             id,
             parentId,
             title: subtask.text,
-            notes: subtask.notes || null,
+            notes: subtask.notes || undefined,
             dueDate: subtask.dueDate
           });
           setIsDetailsDrawerOpen(true);
@@ -1791,7 +1791,7 @@ function App() {
             return { 
               ...todo, 
               text: editingDetails.title,
-              notes: editingDetails.notes || undefined,
+              notes: editingDetails.notes === '' ? undefined : editingDetails.notes,
               dueDate: editingDetails.dueDate,
               subtasks: updatedSubtasks
             };
@@ -1827,7 +1827,7 @@ function App() {
               return { 
                 ...todo, 
                 text: editingDetails.title,
-                notes: editingDetails.notes || undefined,
+                notes: editingDetails.notes === '' ? undefined : editingDetails.notes,
                 dueDate: editingDetails.dueDate,
                 subtasks: updatedSubtasks
               };
@@ -1853,7 +1853,7 @@ function App() {
                 return { 
                   ...subtask, 
                   text: editingDetails.title,
-                  notes: editingDetails.notes || undefined,
+                  notes: editingDetails.notes === '' ? undefined : editingDetails.notes,
                   dueDate: editingDetails.dueDate
                 };
               }
@@ -1919,7 +1919,7 @@ function App() {
                   return { 
                     ...subtask, 
                     text: editingDetails.title,
-                    notes: editingDetails.notes || undefined,
+                    notes: editingDetails.notes === '' ? undefined : editingDetails.notes,
                     dueDate: editingDetails.dueDate
                   };
                 }
