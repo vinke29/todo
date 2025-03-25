@@ -47,6 +47,7 @@
     ]
   },
   "devDependencies": {
-    "@types/react-swipeable": "^5.2.0"
+    "@types/react-swipeable": "^5.2.0",
+    "firebase-tools": "^13.35.1"
   }
 }

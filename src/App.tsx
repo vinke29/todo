@@ -246,6 +246,7 @@ function App() {
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [editingDetails, setEditingDetails] = useState<EditingDetails | null>(null);
   const [detailsCalendarOpen, setDetailsCalendarOpen] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0); // Add this state to force re-renders
   
   // Theme state
   const [currentTheme, setCurrentTheme] = useState<ThemeType>('mondrian');
@@ -544,8 +545,8 @@ function App() {
   };
   
   const handleToggleSubtask = (todoId: number, subtaskId: number) => {
-    setTodos(prevTodos => 
-      prevTodos.map(todo => {
+    setTodos(prevTodos => {
+      return prevTodos.map(todo => {
         if (todo.id === todoId) {
           return {
             ...todo,
@@ -564,8 +565,13 @@ function App() {
           };
         }
         return todo;
-      })
-    );
+      });
+    });
+    
+    // Force a re-render after a small delay to ensure state is updated
+    setTimeout(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 50);
   };
   
   const handleEditSubtaskSave = () => {
@@ -1755,8 +1761,8 @@ function App() {
                   </div>
                 </div>
                 
-                {/* Only show subtasks container if there are subtasks or we're adding one */}
-                {((todo.isExpanded && todo.subtasks.length > 0) || addingSubtaskForId === todo.id) && (
+                {/* Only show subtasks container if there are VISIBLE subtasks or we're adding one */}
+                {((todo.isExpanded && todo.subtasks.some(subtask => !subtask.hidden)) || addingSubtaskForId === todo.id) && (
                   <div className="subtasks-container">
                     {addingSubtaskForId === todo.id && (
                       <div className="new-subtask-input-container">
@@ -1792,7 +1798,7 @@ function App() {
                       </div>
                     )}
                     
-                    {todo.subtasks.length > 0 && (
+                    {todo.subtasks.some(subtask => !subtask.hidden) && (
                       <ul className="subtasks-list">
                         {/* Sort subtasks by due date before rendering */}
                         {(sortByDueDate([...todo.subtasks]) as Subtask[])
