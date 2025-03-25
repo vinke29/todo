@@ -1,17 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, Auth, fetchSignInMethodsForEmail } from 'firebase/auth';
-import { getFirestore, Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, Auth, fetchSignInMethodsForEmail, User } from 'firebase/auth';
+import { getFirestore, Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, connectFirestoreEmulator } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U",
-  authDomain: "to-do-art-e98c4.firebaseapp.com",
-  projectId: "to-do-art-e98c4",
-  storageBucket: "to-do-art-e98c4.appspot.com",
-  messagingSenderId: "156255459350",
-  appId: "1:156255459350:web:50911575d9ffa69aa33d37",
-  measurementId: "G-069YCC3RG6"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyCu0BIwoeKrseP1e_1XtFaD76K2eeR1e9U",
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "to-do-art-e98c4.firebaseapp.com",
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "to-do-art-e98c4",
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "to-do-art-e98c4.appspot.com",
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "156255459350",
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:156255459350:web:50911575d9ffa69aa33d37",
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-069YCC3RG6"
 };
+
+// Add this variable to track connection status
+let firestoreInitialized = false;
 
 // Initialize Firebase with error handling
 console.log("Initializing Firebase...");
@@ -41,27 +44,46 @@ let db: Firestore;
 try {
   db = getFirestore(app);
   
+  // ADD CONNECTION CHECK
+  window.addEventListener('online', () => {
+    console.log("Network is online. Reconnecting to Firestore...");
+    // You might want to add additional reconnection logic here
+  });
+
+  window.addEventListener('offline', () => {
+    console.log("Network is offline. Firestore will use cached data if available.");
+  });
+  
   // Enable offline persistence with unlimited cache size
   // This helps with connectivity issues
   enableIndexedDbPersistence(db, {
     forceOwnership: true
   }).then(() => {
     console.log("Firestore offline persistence enabled");
+    firestoreInitialized = true;
   }).catch((error) => {
     if (error.code === 'failed-precondition') {
       console.warn("Firestore persistence not enabled: multiple tabs open");
+      // Still mark as initialized even if persistence fails
+      firestoreInitialized = true;
     } else if (error.code === 'unimplemented') {
       console.warn("Firestore persistence not enabled: browser not supported");
+      firestoreInitialized = true;
     } else {
       console.error("Firestore persistence error:", error);
+      firestoreInitialized = false;
     }
   });
   
   console.log("Firestore initialized successfully");
 } catch (error) {
   console.error("Error initializing Firestore:", error);
+  firestoreInitialized = false;
   throw new Error("Firestore initialization failed");
 }
+
+// Export Firestore init status
+export const isFirestoreInitialized = () => firestoreInitialized;
 
 // Authentication test function
 export const checkAuthConfiguration = async () => {

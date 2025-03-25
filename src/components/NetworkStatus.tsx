@@ -1,106 +1,173 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './NetworkStatus.css'; // We'll create this file next
+import { isFirestoreInitialized } from '../firebase';
+import { checkCollectionPaths } from '../firestore';
 
 interface NetworkStatusProps {
-  onStatusChange?: (isOnline: boolean) => void;
+  onStatusChange: (online: boolean) => void;
 }
 
 const NetworkStatus: React.FC<NetworkStatusProps> = ({ onStatusChange }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [reconnecting, setReconnecting] = useState(false);
-  const [lastReconnectAttempt, setLastReconnectAttempt] = useState<Date | null>(null);
-
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log('Network is back online');
-      setIsOnline(true);
-      setReconnecting(false);
-      if (onStatusChange) onStatusChange(true);
-    };
-
-    const handleOffline = () => {
-      console.log('Network is offline');
-      setIsOnline(false);
-      if (onStatusChange) onStatusChange(false);
-    };
-
-    // Add event listeners for online/offline events
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Every 30 seconds, check if we're still having issues and try to reconnect
-    const intervalId = setInterval(() => {
-      if (!isOnline || reconnecting) {
-        const now = new Date();
-        
-        // Only try to reconnect if we haven't tried in the last 30 seconds
-        if (!lastReconnectAttempt || (now.getTime() - lastReconnectAttempt.getTime() > 30000)) {
-          console.log('Attempting to reconnect...');
-          setReconnecting(true);
-          setLastReconnectAttempt(now);
-          
-          // Try to ping a resource to check connectivity
-          fetch('https://www.googleapis.com/ping?key=' + Date.now(), { 
-            mode: 'no-cors',
-            cache: 'no-store' 
-          })
-            .then(() => {
-              if (!isOnline) {
-                console.log('Reconnect successful');
-                setIsOnline(true);
-                setReconnecting(false);
-                if (onStatusChange) onStatusChange(true);
-                
-                // Force a page reload to reestablish all connections
-                window.location.reload();
-              }
-            })
-            .catch(error => {
-              console.error('Reconnect failed:', error);
-              setReconnecting(false);
-            });
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState(true);
+  const [showMessage, setShowMessage] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Firestore connection check
+  const checkFirestoreConnection = async () => {
+    // Check if Firestore is initialized
+    const isInitialized = isFirestoreInitialized();
+    if (!isInitialized) {
+      setIsFirestoreConnected(false);
+      setErrorDetails("Firestore initialization failed");
+      return false;
+    }
+    
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      try {
+        const userId = JSON.parse(currentUser).uid;
+        // Try to check collection paths to see if we can access data
+        const success = await checkCollectionPaths(userId);
+        setIsFirestoreConnected(success);
+        if (success) {
+          setErrorDetails(null);
+        } else {
+          setErrorDetails("Cannot access Firestore collections");
         }
+        return success;
+      } catch (error) {
+        console.error("Error checking Firestore connection:", error);
+        setIsFirestoreConnected(false);
+        setErrorDetails(`${error}`);
+        return false;
       }
-    }, 30000);
-
+    }
+    
+    // No user, so we can't check collections
+    return true;
+  };
+  
+  // Attempt reconnection
+  const attemptReconnect = async () => {
+    console.log("Attempting to reconnect to Firebase...");
+    setRetryCount(prev => prev + 1);
+    
+    const success = await checkFirestoreConnection();
+    if (success) {
+      console.log("Successfully reconnected to Firestore");
+      setShowMessage(false);
+      // Try to reload the page to ensure everything is fresh
+      if (retryCount > 2) {
+        window.location.reload();
+      }
+    } else {
+      console.log("Failed to reconnect to Firestore, will retry in 30 seconds");
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(attemptReconnect, 30000);
+    }
+  };
+  
+  // Network status change handler
+  const handleNetworkStatusChange = () => {
+    const online = navigator.onLine;
+    console.log(`Network status: ${online ? 'online' : 'offline'}`);
+    setIsOnline(online);
+    onStatusChange(online);
+    
+    // Show message immediately if offline
+    if (!online) {
+      setShowMessage(true);
+      setErrorDetails("No internet connection");
+    } else {
+      // When coming back online, check Firestore connection
+      checkFirestoreConnection().then(success => {
+        if (!success) {
+          setShowMessage(true);
+        } else {
+          if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current);
+          }
+          // Hide the message after 3 seconds if back online
+          showTimeoutRef.current = setTimeout(() => {
+            setShowMessage(false);
+          }, 3000);
+        }
+      });
+    }
+  };
+  
+  // Initial check and event listeners
+  useEffect(() => {
+    // Check initial status
+    handleNetworkStatusChange();
+    
+    // Add event listeners
+    window.addEventListener('online', handleNetworkStatusChange);
+    window.addEventListener('offline', handleNetworkStatusChange);
+    
+    // Initial Firestore check
+    checkFirestoreConnection().then(success => {
+      if (!success) {
+        console.log("Initial Firestore connection check failed");
+        setShowMessage(true);
+        // Set up automatic retry
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = setTimeout(attemptReconnect, 5000);
+      }
+    });
+    
+    // Cleanup
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearInterval(intervalId);
+      window.removeEventListener('online', handleNetworkStatusChange);
+      window.removeEventListener('offline', handleNetworkStatusChange);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (showTimeoutRef.current) {
+        clearTimeout(showTimeoutRef.current);
+      }
     };
-  }, [isOnline, reconnecting, lastReconnectAttempt, onStatusChange]);
-
-  if (isOnline) {
-    return null; // Don't show anything when online
+  }, []);
+  
+  // Don't show anything if everything is fine
+  if (!showMessage) {
+    return null;
   }
-
+  
+  let statusMessage = "";
+  if (!isOnline) {
+    statusMessage = "You're offline. Please check your internet connection.";
+  } else if (!isFirestoreConnected) {
+    statusMessage = "Cannot connect to Firebase. ";
+    if (errorDetails) {
+      statusMessage += `Error: ${errorDetails}`;
+    }
+  }
+  
   return (
     <div className="network-status">
-      <div className="network-status-overlay">
-        <div className="network-status-message">
-          {reconnecting ? (
-            <>
-              <div className="spinner"></div>
-              <p>Reconnecting...</p>
-            </>
-          ) : (
-            <>
-              <p>⚠️ You appear to be offline</p>
-              <button 
-                className="reconnect-button"
-                onClick={() => {
-                  setReconnecting(true);
-                  setLastReconnectAttempt(new Date());
-                  // Force reload to reestablish connections
-                  window.location.reload();
-                }}
-              >
-                Reconnect
-              </button>
-            </>
-          )}
+      {showMessage && (
+        <div className="network-status-overlay">
+          <div className="network-status-message">
+            <span>{statusMessage}</span>
+            <div className="spinner"></div>
+            <button 
+              className="reconnect-button"
+              onClick={attemptReconnect}
+            >
+              Retry Connection
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

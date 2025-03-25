@@ -1,10 +1,31 @@
-import { db } from './firebase';
+import { db, isFirestoreInitialized } from './firebase';
 import { collection, addDoc, doc, setDoc, deleteDoc, getDoc, getDocs, query, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { Todo, Subtask } from './types';
 
-// Collection name
+// Collection name constants - IMPORTANT: these should match what's in your Firestore database
 const TODOS_COLLECTION = 'todos';
 const COMPLETED_TODOS_COLLECTION = 'completedTodos';
+
+// Helper function to ensure user document exists before accessing collections
+const ensureUserDoc = async (userId: string): Promise<boolean> => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      console.log(`Creating user document for ${userId}`);
+      await setDoc(userDocRef, { 
+        createdAt: Timestamp.now(),
+        lastActive: Timestamp.now() 
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error ensuring user document exists:', error);
+    return false;
+  }
+};
 
 // Convert Firebase timestamp to Date and vice versa
 const convertTimestampToDate = (data: DocumentData): any => {
@@ -69,11 +90,21 @@ const convertDateToTimestamp = (data: any): any => {
 
 // Get active todos for the current user
 export const getTodos = async (userId: string): Promise<Todo[]> => {
+  if (!isFirestoreInitialized()) {
+    console.error('Firestore not initialized, cannot get todos');
+    return [];
+  }
+  
   try {
+    // First ensure the user document exists
+    await ensureUserDoc(userId);
+    
+    console.log(`Getting todos for user ${userId} from collection ${TODOS_COLLECTION}`);
     const userTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const q = query(userTodosRef, orderBy('id', 'asc'));
     const snapshot = await getDocs(q);
     
+    console.log(`Retrieved ${snapshot.size} todos from Firestore`);
     const todos: Todo[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
@@ -92,11 +123,21 @@ export const getTodos = async (userId: string): Promise<Todo[]> => {
 
 // Get completed todos for the current user
 export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
+  if (!isFirestoreInitialized()) {
+    console.error('Firestore not initialized, cannot get completed todos');
+    return [];
+  }
+  
   try {
+    // First ensure the user document exists
+    await ensureUserDoc(userId);
+    
+    console.log(`Getting completed todos for user ${userId} from collection ${COMPLETED_TODOS_COLLECTION}`);
     const userCompletedTodosRef = collection(db, 'users', userId, COMPLETED_TODOS_COLLECTION);
     const q = query(userCompletedTodosRef, orderBy('completedDate', 'desc'));
     const snapshot = await getDocs(q);
     
+    console.log(`Retrieved ${snapshot.size} completed todos from Firestore`);
     const completedTodos: Todo[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
@@ -115,10 +156,19 @@ export const getCompletedTodos = async (userId: string): Promise<Todo[]> => {
 
 // Add a new todo
 export const addTodo = async (userId: string, todo: Todo): Promise<string> => {
+  if (!isFirestoreInitialized()) {
+    console.error('Firestore not initialized, cannot add todo');
+    return '';
+  }
+  
   try {
+    // First ensure the user document exists
+    await ensureUserDoc(userId);
+    
     const userTodosRef = collection(db, 'users', userId, TODOS_COLLECTION);
     const todoData = convertDateToTimestamp(todo);
     const docRef = await addDoc(userTodosRef, todoData);
+    console.log(`Added todo with ID: ${docRef.id}`);
     return docRef.id;
   } catch (error) {
     console.error('Error adding todo:', error);
@@ -203,6 +253,33 @@ export const restoreTodo = async (userId: string, todo: Todo): Promise<boolean> 
     return true;
   } catch (error) {
     console.error('Error restoring todo:', error);
+    return false;
+  }
+};
+
+// Expose a function to check collection paths - this can help debug database structure issues
+export const checkCollectionPaths = async (userId: string): Promise<boolean> => {
+  try {
+    console.log("Checking Firestore collection paths...");
+    
+    // Check user document
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    console.log(`User document exists: ${userDoc.exists()}`);
+    
+    // Check todos collection
+    const todosRef = collection(db, 'users', userId, TODOS_COLLECTION);
+    const todosSnapshot = await getDocs(todosRef);
+    console.log(`Todos collection accessible, contains ${todosSnapshot.size} documents`);
+    
+    // Check completed todos collection
+    const completedTodosRef = collection(db, 'users', userId, COMPLETED_TODOS_COLLECTION);
+    const completedTodosSnapshot = await getDocs(completedTodosRef);
+    console.log(`Completed todos collection accessible, contains ${completedTodosSnapshot.size} documents`);
+    
+    return true;
+  } catch (error) {
+    console.error("Error checking collection paths:", error);
     return false;
   }
 }; 

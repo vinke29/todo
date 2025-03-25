@@ -836,14 +836,28 @@ function App() {
         // Load active todos from Firestore
         const userTodos = await getTodos(currentUser.uid);
         console.log("Fetched active todos:", userTodos.length);
-        setTodos(userTodos);
-        setPreviewTodos(userTodos);
+        
+        // Check for duplicate IDs before setting the state
+        const uniqueTodos = removeDuplicateTodos(userTodos);
+        if (uniqueTodos.length !== userTodos.length) {
+          console.log(`Removed ${userTodos.length - uniqueTodos.length} duplicate todos`);
+        }
+        
+        setTodos(uniqueTodos);
+        setPreviewTodos(uniqueTodos);
         
         console.log("Fetching completed todos from Firestore...");
         // Load completed todos from Firestore
         const userCompletedTodos = await getCompletedTodos(currentUser.uid);
         console.log("Fetched completed todos:", userCompletedTodos.length);
-        setCompletedTasks(userCompletedTodos);
+        
+        // Check for duplicate IDs in completed todos as well
+        const uniqueCompletedTodos = removeDuplicateTodos(userCompletedTodos);
+        if (uniqueCompletedTodos.length !== userCompletedTodos.length) {
+          console.log(`Removed ${userCompletedTodos.length - uniqueCompletedTodos.length} duplicate completed todos`);
+        }
+        
+        setCompletedTasks(uniqueCompletedTodos);
         
         console.log("Successfully loaded all todos from Firestore");
       } catch (error) {
@@ -865,6 +879,30 @@ function App() {
       dataLoadedRef.current = false;
     };
   }, [currentUser]);
+
+  // Helper function to remove duplicate todos
+  const removeDuplicateTodos = (todos: Todo[]): Todo[] => {
+    const idMap = new Map<number, Todo>();
+    const firestoreIdMap = new Map<string, Todo>();
+    
+    // First pass: collect by ID
+    todos.forEach(todo => {
+      // Use the most recent version of a todo with the same ID
+      // or the one with a firestoreId if available
+      const existingTodo = idMap.get(todo.id);
+      if (!existingTodo || (todo.firestoreId && !existingTodo.firestoreId)) {
+        idMap.set(todo.id, todo);
+      }
+      
+      // Also track by firestoreId if available
+      if (todo.firestoreId) {
+        firestoreIdMap.set(todo.firestoreId, todo);
+      }
+    });
+    
+    // Return unique todos, prioritizing ones with firestoreId
+    return Array.from(idMap.values());
+  };
 
   // Helper function to load from localStorage as fallback
   const loadFromLocalStorage = () => {
@@ -966,8 +1004,20 @@ function App() {
         console.log("Executing debounced save to Firestore");
         try {
           let updateCount = 0;
+          
+          // Keep track of todos we've already processed to avoid duplicates
+          const processedIds = new Set<number>();
+          
           // For each todo, save to Firestore
           for (const todo of todos) {
+            // Skip if we've already processed this ID
+            if (processedIds.has(todo.id)) {
+              console.log(`Skipping duplicate todo with id ${todo.id}`);
+              continue;
+            }
+            
+            processedIds.add(todo.id);
+            
             // If todo has a firestoreId, update it; otherwise add it
             if (todo.firestoreId) {
               await updateTodo(currentUser.uid, todo);
@@ -1122,6 +1172,21 @@ function App() {
 
   const handleAddTodo = async () => {
     if (inputValue.trim() === '') return;
+    
+    // Check if a todo with the same text already exists
+    const duplicateTodo = todos.find(todo => 
+      todo.text.toLowerCase() === inputValue.trim().toLowerCase()
+    );
+    
+    if (duplicateTodo) {
+      console.log(`Todo with text "${inputValue}" already exists, not adding duplicate`);
+      // Optionally, you could notify the user here
+      // For now, just clear the input and return
+      setInputValue('');
+      setNewTaskDueDate(null);
+      setIsNewTaskCalendarOpen(false);
+      return;
+    }
     
     const newTodo: Todo = {
       id: Math.max(0, ...todos.map(todo => todo.id)) + 1,
