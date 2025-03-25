@@ -3041,90 +3041,97 @@ function App() {
                         // For preset ranges, just check if after filter date
                         return task.completedDate >= filterDate;
                       })
-                      .map(task => (
-                        <div key={task.id} className="history-item">
-                          <div className="history-task-main">
-                            <button
-                              type="button"
-                              className={`checkbox checked`}
-                              onClick={() => handleRestoreTask(task.id)}
-                              aria-label="Restore task to active list"
-                              title="Uncheck to restore task"
-                            >
-                              ✓
-                            </button>
-                            <div className="history-task-header">
-                              <span 
-                                className="history-task-text"
-                                onClick={() => openDetailsDrawer('task', task.id)}
-                                style={{ cursor: 'pointer' }}
-                                title="Click to view details"
-                              >{task.text}</span>
-                              <div className="history-date-container">
-                                {task.completedDate && (
-                                  <span className="history-done-date">
-                                    Done: {formatDate(task.completedDate)}
-                                  </span>
-                                )}
-                                {task.dueDate && (
-                                  <span className="history-due-date">
-                                    Due: {formatDate(task.dueDate)}
-                                  </span>
-                                )}
-                                {task.completedDate && task.dueDate && (
-                                  <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
-                                    {getCompletionStatus(task.completedDate, task.dueDate).label}
-                                  </span>
-                                )}
+                      .map(task => {
+                        // Highlight tasks with specific keywords or conditions
+                        const shouldHighlight = task.text.toLowerCase().includes('buseta');
+                        // Create a new task object with the highlight property
+                        const taskWithHighlight = { ...task, highlight: shouldHighlight };
+                        
+                        return (
+                          <div key={task.id} className={`history-item ${taskWithHighlight.highlight ? 'highlighted' : ''}`}>
+                            <div className="history-task-main">
+                              <button
+                                type="button"
+                                className={`checkbox checked`}
+                                onClick={() => handleRestoreTask(task.id)}
+                                aria-label="Restore task to active list"
+                                title="Uncheck to restore task"
+                              >
+                                ✓
+                              </button>
+                              <div className="history-task-header">
+                                <span 
+                                  className="history-task-text"
+                                  onClick={() => openDetailsDrawer('task', task.id)}
+                                  style={{ cursor: 'pointer' }}
+                                  title="Click to view details"
+                                >{task.text}</span>
+                                <div className="history-date-container">
+                                  {task.completedDate && (
+                                    <span className="history-done-date">
+                                      Done: {formatDate(task.completedDate)}
+                                    </span>
+                                  )}
+                                  {task.dueDate && (
+                                    <span className="history-due-date">
+                                      Due: {formatDate(task.dueDate)}
+                                    </span>
+                                  )}
+                                  {task.completedDate && task.dueDate && (
+                                    <span className={`completion-status ${getCompletionStatus(task.completedDate, task.dueDate).status}`}>
+                                      {getCompletionStatus(task.completedDate, task.dueDate).label}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          
-                          {/* Show all subtasks for completed tasks */}
-                          {task.subtasks.length > 0 && (
-                            <div className="history-subtasks">
-                              {task.subtasks.map(subtask => (
-                                <div key={subtask.id} className="history-subtask-item">
-                                  <button
-                                    type="button"
-                                    className={`subtask-checkbox checked`}
-                                    onClick={() => handleRestoreSubtaskFromCompletedTask(task.id, subtask.id)}
-                                    aria-label="Restore subtask to a new or existing active task"
-                                    title="Uncheck to restore subtask"
-                                  >
-                                    ✓
-                                  </button>
-                                  <div className="history-subtask-content">
-                                    <span 
-                                      className="history-subtask-text"
-                                      onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
-                                      style={{ cursor: 'pointer' }}
-                                      title="Click to view details"
-                                    >{subtask.text}</span>
-                                    <div className="history-subtask-dates">
-                                      {subtask.completedDate && (
-                                        <span className="history-subtask-done-date">
-                                          Done: {formatDate(subtask.completedDate)}
-                                        </span>
-                                      )}
-                                      {subtask.dueDate && (
-                                        <span className="history-subtask-due-date">
-                                          Due: {formatDate(subtask.dueDate)}
-                                        </span>
-                                      )}
-                                      {subtask.completedDate && subtask.dueDate && (
-                                        <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
-                                          {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
-                                        </span>
-                                      )}
+                            
+                            {/* Show all subtasks for completed tasks */}
+                            {task.subtasks.length > 0 && (
+                              <div className="history-subtasks">
+                                {task.subtasks.map(subtask => (
+                                  <div key={subtask.id} className="history-subtask-item">
+                                    <button
+                                      type="button"
+                                      className={`subtask-checkbox checked`}
+                                      onClick={() => handleRestoreSubtaskFromCompletedTask(task.id, subtask.id)}
+                                      aria-label="Restore subtask to a new or existing active task"
+                                      title="Uncheck to restore subtask"
+                                    >
+                                      ✓
+                                    </button>
+                                    <div className="history-subtask-content">
+                                      <span 
+                                        className="history-subtask-text"
+                                        onClick={() => openDetailsDrawer('subtask', subtask.id, task.id)}
+                                        style={{ cursor: 'pointer' }}
+                                        title="Click to view details"
+                                      >{subtask.text}</span>
+                                      <div className="history-subtask-dates">
+                                        {subtask.completedDate && (
+                                          <span className="history-subtask-done-date">
+                                            Done: {formatDate(subtask.completedDate)}
+                                          </span>
+                                        )}
+                                        {subtask.dueDate && (
+                                          <span className="history-subtask-due-date">
+                                            Due: {formatDate(subtask.dueDate)}
+                                          </span>
+                                        )}
+                                        {subtask.completedDate && subtask.dueDate && (
+                                          <span className={`completion-status ${getCompletionStatus(subtask.completedDate, subtask.dueDate).status}`}>
+                                            {getCompletionStatus(subtask.completedDate, subtask.dueDate).label}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
                     }
                   </div>
                 )}

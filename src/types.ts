@@ -18,4 +18,5 @@ export interface Todo {
   isExpanded: boolean;
   notes?: string;
   firestoreId?: string; // ID from Firestore document
+  highlight?: boolean; // Whether this task should be highlighted in the UI
 } 

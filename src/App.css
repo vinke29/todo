@@ -2255,3 +2255,263 @@ button:disabled {
   z-index: 3;
 }
 
+/* Updated History Item Styling */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.history-task-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.history-task-header {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-task-text {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #333;
+  word-break: break-word;
+}
+
+.history-date-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.history-done-date, .history-due-date {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #555;
+  display: inline-flex;
+  align-items: center;
+}
+
+.history-done-date {
+  color: #2e7d32;
+}
+
+.history-due-date {
+  color: #0277bd;
+}
+
+.completion-status {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.completion-status.on-time {
+  background-color: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+}
+
+.completion-status.late {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+}
+
+.history-subtasks {
+  margin-top: 12px;
+  margin-left: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-subtask-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.history-subtask-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-subtask-text {
+  font-size: 0.95rem;
+  color: #444;
+  word-break: break-word;
+}
+
+.history-subtask-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.history-subtask-done-date, .history-subtask-due-date {
+  font-size: 0.8rem;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.history-subtask-done-date {
+  color: #2e7d32;
+}
+
+.history-subtask-due-date {
+  color: #0277bd;
+}
+
+/* Dark mode styles for history items */
+.App-header .history-item {
+  background-color: #2c3e50;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.App-header .history-task-text {
+  color: #ecf0f1;
+}
+
+.App-header .history-done-date, 
+.App-header .history-due-date,
+.App-header .history-subtask-done-date,
+.App-header .history-subtask-due-date {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.App-header .history-done-date,
+.App-header .history-subtask-done-date {
+  color: #81c784;
+}
+
+.App-header .history-due-date,
+.App-header .history-subtask-due-date {
+  color: #64b5f6;
+}
+
+.App-header .completion-status.on-time {
+  background-color: rgba(129, 199, 132, 0.2);
+  color: #81c784;
+}
+
+.App-header .completion-status.late {
+  background-color: rgba(229, 115, 115, 0.2);
+  color: #e57373;
+}
+
+.App-header .history-subtask-item {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.App-header .history-subtask-text {
+  color: #bdc3c7;
+}
+
+/* Mondrian theme styling for history items */
+.mondrian .history-item {
+  border: 3px solid black;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
+  border-radius: 0;
+  padding: 16px;
+  background-color: white;
+}
+
+.mondrian .history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
+}
+
+.mondrian .history-done-date {
+  background-color: #4CAF50;
+  color: white;
+  border: 2px solid black;
+  border-radius: 0;
+}
+
+.mondrian .history-due-date {
+  background-color: #2196F3;
+  color: white;
+  border: 2px solid black;
+  border-radius: 0;
+}
+
+.mondrian .completion-status.on-time {
+  background-color: #4CAF50;
+  color: white;
+  border: 2px solid black;
+  border-radius: 0;
+}
+
+.mondrian .completion-status.late {
+  background-color: #F44336;
+  color: white;
+  border: 2px solid black;
+  border-radius: 0;
+}
+
+.mondrian .history-subtask-item {
+  border: 2px solid black;
+  border-radius: 0;
+  background-color: #FFF9C4;
+}
+
+/* For the yellow highlighted task in the screenshot */
+.history-item.highlighted {
+  background-color: #FFF9C4;
+}
+
+.mondrian .history-item.highlighted {
+  background-color: #FFD700;
+}
+
+/* Make sure the checkboxes in history items look consistent */
+.history-item .checkbox.checked,
+.history-item .subtask-checkbox.checked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid #2196F3;
+  background-color: #2196F3;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mondrian .history-item .checkbox.checked,
+.mondrian .history-item .subtask-checkbox.checked {
+  border-radius: 0;
+  border: 2px solid black;
+}
+
