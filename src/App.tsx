@@ -202,7 +202,8 @@ function App() {
   // State for todos and input
   const [todos, setTodos] = useState<Todo[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Todo[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState<string>('');
+  const [isAppLoading, setIsAppLoading] = useState<boolean>(false);
   
   // Authentication state
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -236,7 +237,7 @@ function App() {
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
   
   // App title state
-  const [appTitle, setAppTitle] = useState('Your to-dos');
+  const [appTitle, setAppTitle] = useState<string>('Your to-dos');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isTitleHovered, setIsTitleHovered] = useState(false);
   
@@ -793,10 +794,8 @@ function App() {
   
   // Load theme preference from localStorage on initial render
   useEffect(() => {
-    const savedTodos = localStorage.getItem('todos');
     const savedTitle = localStorage.getItem('appTitle');
     const savedTheme = localStorage.getItem('theme') as ThemeType;
-    const savedCompletedTasks = localStorage.getItem('completedTasks');
     
     if (savedTitle) {
       setAppTitle(savedTitle);
@@ -810,6 +809,43 @@ function App() {
     } else {
       setCurrentTheme('mondrian'); // Set Mondrian as default if no theme is saved
     }
+  }, []);
+
+  // Load todos from Firestore when user changes
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (currentUser) {
+        setIsAppLoading(true);
+        try {
+          // Load active todos from Firestore
+          const userTodos = await getTodos(currentUser.uid);
+          setTodos(userTodos);
+          setPreviewTodos(userTodos);
+          
+          // Load completed todos from Firestore
+          const userCompletedTodos = await getCompletedTodos(currentUser.uid);
+          setCompletedTasks(userCompletedTodos);
+          
+          console.log("Loaded todos from Firestore:", userTodos.length, "active,", userCompletedTodos.length, "completed");
+        } catch (error) {
+          console.error("Error loading todos from Firestore:", error);
+          
+          // Fallback to localStorage if Firestore fails
+          loadFromLocalStorage();
+        } finally {
+          setIsAppLoading(false);
+        }
+      }
+    };
+    
+    loadUserData();
+  }, [currentUser]);
+
+  // Helper function to load from localStorage as fallback
+  const loadFromLocalStorage = () => {
+    console.log("Falling back to localStorage for todos");
+    const savedTodos = localStorage.getItem('todos');
+    const savedCompletedTasks = localStorage.getItem('completedTasks');
     
     if (savedTodos) {
       try {
@@ -839,7 +875,7 @@ function App() {
         console.error('Error parsing completedTasks from localStorage', e);
       }
     }
-  }, []);
+  };
 
   // Save theme preference to localStorage when it changes
   useEffect(() => {
@@ -888,16 +924,60 @@ function App() {
   // Save todos, title, and theme preference to localStorage when they change
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(todos));
-  }, [todos]);
-  
-  useEffect(() => {
-    localStorage.setItem('appTitle', appTitle);
-  }, [appTitle]);
+    
+    // Also save to Firestore if user is logged in
+    const saveToFirestore = async () => {
+      if (currentUser && todos.length > 0) {
+        try {
+          // For each todo, save to Firestore
+          for (const todo of todos) {
+            // If todo has a firestoreId, update it; otherwise add it
+            if (todo.firestoreId) {
+              await updateTodo(currentUser.uid, todo);
+            } else {
+              const newId = await addTodo(currentUser.uid, todo);
+              // Update local state with the new Firestore ID
+              if (newId) {
+                setTodos(prevTodos => 
+                  prevTodos.map(t => 
+                    t.id === todo.id ? { ...t, firestoreId: newId } : t
+                  )
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error saving todos to Firestore:", error);
+        }
+      }
+    };
+    
+    saveToFirestore();
+  }, [todos, currentUser]);
 
   // Save completed tasks to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
-  }, [completedTasks]);
+    
+    // Also save to Firestore if user is logged in
+    const saveCompletedToFirestore = async () => {
+      if (currentUser && completedTasks.length > 0) {
+        try {
+          for (const task of completedTasks) {
+            // For completed tasks that don't have a firestoreId yet
+            if (!task.firestoreId) {
+              // We need to add it to Firestore completed collection
+              await moveTodoToCompleted(currentUser.uid, task);
+            }
+          }
+        } catch (error) {
+          console.error("Error saving completed tasks to Firestore:", error);
+        }
+      }
+    };
+    
+    saveCompletedToFirestore();
+  }, [completedTasks, currentUser]);
 
   // Focus the title input when entering edit mode
   useEffect(() => {
@@ -987,25 +1067,33 @@ function App() {
       completedDate: null,
       subtasks: [],
       isExpanded: false,
-      notes: ''
+      firestoreId: '' // Initialize empty firestoreId
     };
     
+    // Add to local state first for immediate UI update
     setTodos(prevTodos => [...prevTodos, newTodo]);
-    setInputValue('');
-    setNewTaskDueDate(null);
     
-    // Save to Firestore
+    // Then add to Firestore if user is logged in
     if (currentUser) {
-      const firestoreId = await addTodo(currentUser.uid, newTodo);
-      if (firestoreId) {
-        // Update the local todo with the Firestore ID
-        setTodos(prevTodos => 
-          prevTodos.map(todo => 
-            todo.id === newTodo.id ? { ...todo, firestoreId } : todo
-          )
-        );
+      try {
+        const newId = await addTodo(currentUser.uid, newTodo);
+        if (newId) {
+          // Update the todo with the Firestore ID
+          setTodos(prevTodos => 
+            prevTodos.map(todo => 
+              todo.id === newTodo.id ? { ...todo, firestoreId: newId } : todo
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error adding todo to Firestore:", error);
       }
     }
+    
+    // Reset input and due date
+    setInputValue('');
+    setNewTaskDueDate(null);
+    setIsNewTaskCalendarOpen(false);
   };
 
   const handleToggleTodo = async (id: number) => {
@@ -1049,15 +1137,20 @@ function App() {
   };
 
   const handleDeleteTodo = async (id: number) => {
+    // Find the todo to be deleted
     const todoToDelete = todos.find(todo => todo.id === id);
-    
     if (!todoToDelete) return;
     
+    // Remove from local state
     setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
     
-    // Delete from Firestore
+    // Delete from Firestore if user is logged in and todo has a firestoreId
     if (currentUser && todoToDelete.firestoreId) {
-      await deleteTodo(currentUser.uid, todoToDelete.firestoreId);
+      try {
+        await deleteTodo(currentUser.uid, todoToDelete.firestoreId);
+      } catch (error) {
+        console.error("Error deleting todo from Firestore:", error);
+      }
     }
   };
   
@@ -1541,6 +1634,20 @@ function App() {
               console.warn("Login succeeded but no current user found");
             }
           }} />
+        </header>
+      </div>
+    );
+  }
+  
+  // Show loading indicator when fetching user todos from Firestore
+  if (isAppLoading) {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading your todos...</p>
+          </div>
         </header>
       </div>
     );
